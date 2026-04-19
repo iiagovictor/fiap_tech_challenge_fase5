@@ -1,4 +1,4 @@
-.PHONY: help install fetch process fetch-daily scheduler scheduler-once scheduler-daemon test clean test-event lambda-build lambda-deploy lambda-invoke lambda-logs
+.PHONY: help install fetch process fetch-daily pipeline scheduler scheduler-once scheduler-daemon test clean test-event lambda-build lambda-deploy lambda-invoke lambda-logs golden-create golden-list
 
 help:
 	@echo "FIAP Tech Challenge - Fase 5"
@@ -23,6 +23,10 @@ help:
 	@echo "  make lambda-deploy     - Deploy da função Lambda no AWS"
 	@echo "  make lambda-invoke     - Invoca função Lambda via CLI"
 	@echo "  make lambda-logs       - Mostra logs em tempo real"
+	@echo ""
+	@echo "--- Golden Set ---"
+	@echo "  make golden-create     - Cria golden_set do processed atual"
+	@echo "  make golden-list       - Lista golden_sets disponíveis"
 	@echo ""
 	@echo "--- Testes & Limpeza ---"
 	@echo "  make test              - Executa testes unitários"
@@ -92,6 +96,14 @@ lambda-invoke:
 
 lambda-logs:
 	@aws logs tail /aws/lambda/daily-data-pipeline --follow --region us-east-1
+
+golden-create:
+	@echo "Criando golden_set..."
+	python scripts/create_golden_set.py
+
+golden-list:
+	@echo "Golden sets disponíveis:"
+	python scripts/create_golden_set.py --list
 
 test:
 	pytest tests/ -v

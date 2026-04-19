@@ -2,6 +2,8 @@
 Stage 2 — Process
 Valida o schema dos dados brutos com Pandera, limpa e enriquece
 o dataset, valida o schema processado e persiste como Parquet.
+
+Inclui validação contra Golden Set para garantir qualidade.
 """
 from __future__ import annotations
 
@@ -17,6 +19,7 @@ import yaml
 sys.path.insert(0, str(Path(__file__).parent))
 
 from schema import validate_raw, validate_processed
+from validation import validate_against_golden_set
 
 logging.basicConfig(
     level=logging.INFO,
@@ -96,6 +99,32 @@ def main() -> None:
     PROCESSED_OUTPUT.parent.mkdir(parents=True, exist_ok=True)
     df.to_parquet(PROCESSED_OUTPUT, index=False)
     log.info("Processed data saved → %s (%d rows)", PROCESSED_OUTPUT, len(df))
+
+    # ── Validação 3: Validação contra Golden Set ──────────────────────────
+    log.info("Validating against golden_set...")
+    try:
+        validation_result = validate_against_golden_set(df)
+        
+        # Log resultado
+        if validation_result.status == "pass":
+            log.info("✓ Golden set validation PASSED")
+        elif validation_result.status == "warning":
+            log.warning("⚠ Golden set validation warnings:")
+            for anomaly in validation_result.anomalies:
+                log.warning(f"  - {anomaly}")
+        elif validation_result.status == "skip":
+            log.info("⊘ Golden set validation SKIPPED: %s", validation_result.message)
+        else:
+            log.error("✗ Golden set validation FAILED:")
+            for anomaly in validation_result.anomalies:
+                log.error(f"  - {anomaly}")
+            # Não interrompe o pipeline, apenas alerta
+        
+        log.debug(f"Validation details: {validation_result.to_dict()}")
+        
+    except Exception as e:
+        log.error("Error during golden_set validation: %s", e)
+        # Não interrompe o pipeline se falhar a validação
 
 
 if __name__ == "__main__":
