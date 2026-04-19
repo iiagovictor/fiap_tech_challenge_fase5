@@ -1,0 +1,66 @@
+schema: '2.0'
+stages:
+  fetch:
+    cmd: python src/data/ingest.py
+    deps:
+    - path: configs/model_config.yaml
+      hash: md5
+      md5: fb72d8bab0264ac1dd2855fd28b3f6e7
+      size: 281
+    - path: src/data/ingest.py
+      hash: md5
+      md5: 75d8184b2f3ff5871ba2c86f7e7b0c18
+      size: 2551
+    - path: src/features/schema.py
+      hash: md5
+      md5: f5a2e69d2aa56c413730f880991519f2
+      size: 3477
+    params:
+      params.yaml:
+        fetch:
+          tickers:
+          - AAPL
+          - MSFT
+          - GOOGL
+          - AMZN
+          - META
+          start_date: '2023-01-01'
+          end_date: '2024-12-31'
+          interval: 1d
+    outs:
+    - path: data/raw/ohlcv_raw.csv
+      hash: md5
+      md5: 37f0f33252b640bf7a351e0c9534a49a
+      size: 249061
+  process:
+    cmd: python src/features/process.py
+    deps:
+    - path: configs/model_config.yaml
+      hash: md5
+      md5: fb72d8bab0264ac1dd2855fd28b3f6e7
+      size: 281
+    - path: data/raw/ohlcv_raw.csv
+      hash: md5
+      md5: 37f0f33252b640bf7a351e0c9534a49a
+      size: 249061
+    - path: src/features/process.py
+      hash: md5
+      md5: ccde731108d5a5df61ff360a3f00b84d
+      size: 3990
+    - path: src/features/schema.py
+      hash: md5
+      md5: f5a2e69d2aa56c413730f880991519f2
+      size: 3477
+    params:
+      params.yaml:
+        process:
+          min_price: 0.01
+          max_price: 1000000.0
+          min_volume: 0
+          max_volume: 100000000000
+          output_format: parquet
+    outs:
+    - path: data/processed/ohlcv_processed.parquet
+      hash: md5
+      md5: 01870beee012bf5abb2317754ccd9b12
+      size: 164557

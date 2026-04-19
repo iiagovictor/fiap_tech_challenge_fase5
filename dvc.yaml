@@ -1,0 +1,24 @@
+stages:
+
+  fetch:
+    cmd: python src/data/ingest.py
+    deps:
+      - src/data/ingest.py
+      - src/features/schema.py
+      - configs/model_config.yaml
+    params:
+      - fetch
+    outs:
+      - data/raw/ohlcv_raw.csv
+
+  process:
+    cmd: python src/features/process.py
+    deps:
+      - src/features/process.py
+      - src/features/schema.py
+      - data/raw/ohlcv_raw.csv
+      - configs/model_config.yaml
+    params:
+      - process
+    outs:
+      - data/processed/ohlcv_processed.parquet

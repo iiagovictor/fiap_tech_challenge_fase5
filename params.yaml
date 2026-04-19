@@ -1,0 +1,17 @@
+fetch:
+  tickers:
+    - AAPL
+    - MSFT
+    - GOOGL
+    - AMZN
+    - META
+  start_date: "2023-01-01"
+  end_date: "2024-12-31"
+  interval: "1d"
+
+process:
+  min_price: 0.01
+  max_price: 1000000.0
+  min_volume: 0
+  max_volume: 100000000000
+  output_format: "parquet"
