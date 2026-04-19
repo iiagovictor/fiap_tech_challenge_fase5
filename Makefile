@@ -1,4 +1,4 @@
-.PHONY: help install fetch process fetch-daily pipeline scheduler scheduler-once scheduler-daemon test clean test-event lambda-build lambda-deploy lambda-invoke lambda-logs golden-create golden-list
+.PHONY: help install fetch process fetch-daily pipeline scheduler scheduler-once scheduler-daemon test clean test-event lambda-build lambda-deploy lambda-invoke lambda-logs golden-create golden-list agent-example agent-validate agent-report agent-tools
 
 help:
 	@echo "FIAP Tech Challenge - Fase 5"
@@ -27,6 +27,12 @@ help:
 	@echo "--- Golden Set ---"
 	@echo "  make golden-create     - Cria golden_set do processed atual"
 	@echo "  make golden-list       - Lista golden_sets disponíveis"
+	@echo ""
+	@echo "--- ReAct Agent ---"
+	@echo "  make agent-example     - Executar exemplos do agent"
+	@echo "  make agent-validate    - Validar dados com agent"
+	@echo "  make agent-report      - Gerar relatório com agent"
+	@echo "  make agent-tools       - Listar tools disponíveis"
 	@echo ""
 	@echo "--- Testes & Limpeza ---"
 	@echo "  make test              - Executa testes unitários"
@@ -107,6 +113,26 @@ golden-list:
 
 test:
 	pytest tests/ -v
+
+# ──────────────────────────────────────────────────────────────────────────
+# ReAct Agent
+# ──────────────────────────────────────────────────────────────────────────
+
+agent-example:
+	@echo "Executando exemplos do ReAct Agent..."
+	@python -c "import sys; sys.path.insert(0, 'src'); from agent.examples import example_5_display_tools; example_5_display_tools()"
+
+agent-tools:
+	@echo "Tools disponíveis no ReAct Agent:"
+	@python -c "import sys; sys.path.insert(0, 'src'); from agent.react_agent import ReActAgent; a = ReActAgent(); print(a.get_tools_description())"
+
+agent-validate:
+	@echo "Validando dados com ReAct Agent..."
+	@python -c "import sys, json; sys.path.insert(0, 'src'); from agent.react_agent import ReActAgent; a = ReActAgent(); r = a.run('validar_dados'); print(json.dumps(r, indent=2, default=str))"
+
+agent-report:
+	@echo "Gerando relatório com ReAct Agent..."
+	@python -c "import sys, json; sys.path.insert(0, 'src'); from agent.react_agent import ReActAgent; a = ReActAgent(); r = a.run('gerar_relatorio'); print(json.dumps(r, indent=2, default=str))"
 
 clean:
 	find . -type d -name __pycache__ -exec rm -rf {} + 2>/dev/null || true
