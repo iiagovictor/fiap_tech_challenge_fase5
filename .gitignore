@@ -97,7 +97,7 @@ cache/
 *.iml
 
 # Arquivos gerados por aplicação
-data/
+data/feature_store/stock_features.parquet
 output/
 results/
 
