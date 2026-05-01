@@ -1,0 +1,52 @@
+stages:
+  data_download:
+    cmd: python -m src.data.ingestion
+    deps:
+      - src/data/ingestion.py
+      - src/config/settings.py
+    params:
+      - data_tickers
+      - data_start_date
+      - data_interval
+    outs:
+      - data/raw/raw_stock_data.parquet
+
+  feature_engineering:
+    cmd: python -m src.features.feature_engineering
+    deps:
+      - src/features/feature_engineering.py
+      - data/raw/raw_stock_data.parquet
+    outs:
+      - data/features/stock_features.parquet
+
+  feast_apply:
+    cmd: feast -c feast/ apply
+    deps:
+      - feast/feature_store_definitions.py
+      - data/features/stock_features.parquet
+    outs:
+      - data/feast/registry.db
+
+  train_model:
+    cmd: python -m src.models.train
+    deps:
+      - src/models/train.py
+      - data/features/stock_features.parquet
+    params:
+      - model_lstm_units
+      - model_dropout
+      - model_epochs
+      - model_batch_size
+      - model_seq_length
+    metrics:
+      - models/metrics.json:
+          cache: false
+
+  evaluate_drift:
+    cmd: python -m src.monitoring.drift
+    deps:
+      - src/monitoring/drift.py
+      - data/features/stock_features.parquet
+    outs:
+      - reports/drift_report.html:
+          cache: false
