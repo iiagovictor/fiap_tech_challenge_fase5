@@ -1,0 +1,129 @@
+# Environment and Virtual Environments
+.venv/
+venv/
+env/
+ENV/
+.env
+.env.local
+.env.*.local
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+MANIFEST
+pip-log.txt
+pip-delete-this-directory.txt
+
+# Testing
+.pytest_cache/
+.coverage
+.coverage.*
+htmlcov/
+.tox/
+.hypothesis/
+.nose*
+
+# Type Checking
+.mypy_cache/
+.dmypy.json
+dmypy.json
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+.DS_Store
+*.code-workspace
+
+# DVC
+.dvc/
+dvc.lock
+
+# Feast
+.feast/
+
+# Data and Logs
+*.log
+logs/
+data/processed/
+data/raw/*.csv
+!data/raw/ohlcv_raw.csv
+*.parquet
+*.csv.gz
+
+# Model Artifacts
+*.pkl
+*.joblib
+*.h5
+*.pt
+*.pth
+*.onnx
+models/artifacts/
+
+# Jupyter
+.ipynb_checkpoints/
+*.ipynb
+
+# OS
+.DS_Store
+Thumbs.db
+.gitkeep
+
+# Docker
+.dockerignore
+
+# Temporary files
+*.tmp
+*.bak
+*.backup
+*~
+
+# Credentials and Secrets
+credentials.json
+secrets.json
+.aws/
+.gcp/
+*.key
+*.pem
+
+# Build artifacts
+dist/
+build/
+*.egg-info/
+
+# Monitoring and metrics
+prometheus_data/
+grafana_data/
+*.db
+*.sqlite
+*.sqlite3
+
+# AWS Lambda
+lambda_package/
+lambda_function.zip
+
+# Specific to project
+.streamlit/
+cache/
+temp/
+tmp/
