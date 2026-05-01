@@ -3,7 +3,12 @@
         train serve serve-alt stop-serve serve-docker test test-cov lint format \
         dvc-init dvc-push dvc-pull clean deploy-aws seed-rag
 
-PYTHON  := $(CURDIR)/.venv/bin/python
+# Detectar OS e configurar caminhos apropriados
+ifeq ($(OS),Windows_NT)
+    PYTHON := $(CURDIR)\.venv\Scripts\python.exe
+else
+    PYTHON := $(CURDIR)/.venv/bin/python
+endif
 COMPOSE := docker compose
 PROJECT := fiap-tc-fase5
 AWS_REGION := us-east-1
