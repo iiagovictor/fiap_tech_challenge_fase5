@@ -1,0 +1,242 @@
+version: '3.8'
+
+services:
+  # ============================================================
+  # MLflow — Model Registry & Tracking Server
+  # ============================================================
+  mlflow:
+    image: ghcr.io/mlflow/mlflow:v2.10.0
+    container_name: mlflow_server
+    ports:
+      - "5001:5000"
+    volumes:
+      - ./data/mlflow:/mlflow
+    environment:
+      - AWS_ACCESS_KEY_ID=${AWS_ACCESS_KEY_ID:-minioadmin}
+      - AWS_SECRET_ACCESS_KEY=${AWS_SECRET_ACCESS_KEY:-minioadmin123}
+      - MLFLOW_S3_ENDPOINT_URL=${AWS_ENDPOINT_URL:-http://minio:9000}
+    command: >
+      mlflow server
+      --backend-store-uri sqlite:///mlflow/mlflow.db
+      --default-artifact-root ${MLFLOW_ARTIFACT_ROOT:-s3://mlflow-artifacts}
+      --host 0.0.0.0
+      --port 5000
+    networks:
+      - fiap-network
+    depends_on:
+      - minio
+
+  # ============================================================
+  # MinIO — S3-Compatible Local Storage
+  # ============================================================
+  minio:
+    image: quay.io/minio/minio:RELEASE.2024-01-16T16-07-38Z
+    container_name: minio_storage
+    ports:
+      - "9000:9000"
+      - "9001:9001"
+    volumes:
+      - ./data/minio:/data
+    environment:
+      MINIO_ROOT_USER: ${AWS_ACCESS_KEY_ID:-minioadmin}
+      MINIO_ROOT_PASSWORD: ${AWS_SECRET_ACCESS_KEY:-minioadmin123}
+    command: server /data --console-address ":9001"
+    networks:
+      - fiap-network
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:9000/minio/health/live"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  # Create default buckets for MinIO
+  minio-init:
+    image: quay.io/minio/mc:RELEASE.2024-01-16T16-06-34Z
+    container_name: minio_init
+    depends_on:
+      - minio
+    entrypoint: >
+      /bin/sh -c "
+      sleep 5;
+      /usr/bin/mc alias set myminio http://minio:9000 minioadmin minioadmin123;
+      /usr/bin/mc mb myminio/mlflow-artifacts --ignore-existing;
+      /usr/bin/mc mb myminio/feast-offline-store --ignore-existing;
+      /usr/bin/mc mb myminio/fiap-tc-fase5-data --ignore-existing;
+      /usr/bin/mc policy set download myminio/mlflow-artifacts;
+      exit 0;
+      "
+    networks:
+      - fiap-network
+
+  # ============================================================
+  # Redis — Online Feature Store (Feast)
+  # ============================================================
+  redis:
+    image: redis:7.2-alpine
+    container_name: redis_feast
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    command: redis-server --appendonly yes --maxmemory 256mb --maxmemory-policy allkeys-lru
+    networks:
+      - fiap-network
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+
+  # ============================================================
+  # ChromaDB — Vector Database for RAG
+  # ============================================================
+  chromadb:
+    image: chromadb/chroma:0.4.24
+    container_name: chromadb_rag
+    ports:
+      - "8002:8000"
+    volumes:
+      - ./data/chromadb:/chroma/chroma
+    environment:
+      - IS_PERSISTENT=TRUE
+      - ANONYMIZED_TELEMETRY=FALSE
+    networks:
+      - fiap-network
+
+  # ============================================================
+  # Prometheus — Metrics Collector
+  # ============================================================
+  prometheus:
+    image: prom/prometheus:v2.49.1
+    container_name: prometheus_monitoring
+    ports:
+      - "${PROMETHEUS_PORT:-9090}:9090"
+    volumes:
+      - ./configs/prometheus.yml:/etc/prometheus/prometheus.yml
+      - prometheus_data:/prometheus
+    command:
+      - '--config.file=/etc/prometheus/prometheus.yml'
+      - '--storage.tsdb.path=/prometheus'
+      - '--storage.tsdb.retention.time=30d'
+    networks:
+      - fiap-network
+    depends_on:
+      - api
+
+  # ============================================================
+  # Grafana — Monitoring Dashboards
+  # ============================================================
+  grafana:
+    image: grafana/grafana:10.3.1
+    container_name: grafana_monitoring
+    ports:
+      - "${GRAFANA_PORT:-3000}:3000"
+    volumes:
+      - ./configs/grafana/provisioning:/etc/grafana/provisioning
+      - grafana_data:/var/lib/grafana
+    environment:
+      - GF_SECURITY_ADMIN_PASSWORD=${GRAFANA_ADMIN_PASSWORD:-admin}
+      - GF_USERS_ALLOW_SIGN_UP=false
+      - GF_AUTH_ANONYMOUS_ENABLED=false
+    networks:
+      - fiap-network
+    depends_on:
+      - prometheus
+
+  # ============================================================
+  # Ollama — Local LLM Server (optional)
+  # ============================================================
+  ollama:
+    image: ollama/ollama:0.1.23
+    container_name: ollama_llm
+    ports:
+      - "11434:11434"
+    volumes:
+      - ollama_models:/root/.ollama
+    environment:
+      - OLLAMA_KEEP_ALIVE=5m
+    networks:
+      - fiap-network
+    # GPU support (uncomment if NVIDIA GPU available)
+    # deploy:
+    #   resources:
+    #     reservations:
+    #       devices:
+    #         - driver: nvidia
+    #           count: 1
+    #           capabilities: [gpu]
+
+  # Pull llama3 model on first run (optional)
+  ollama-init:
+    image: ollama/ollama:0.1.23
+    container_name: ollama_init
+    depends_on:
+      - ollama
+    entrypoint: >
+      /bin/sh -c "
+      sleep 10;
+      ollama pull llama3;
+      exit 0;
+      "
+    networks:
+      - fiap-network
+
+  # ============================================================
+  # FastAPI Application
+  # ============================================================
+  api:
+    build:
+      context: .
+      dockerfile: src/serving/Dockerfile
+    container_name: api_serving
+    ports:
+      - "${API_PORT:-8000}:8000"
+    volumes:
+      - ./:/app
+      - ./data:/app/data
+    environment:
+      - STORAGE_BACKEND=${STORAGE_BACKEND:-local}
+      - STORAGE_URI=${STORAGE_URI:-data/}
+      - MLFLOW_TRACKING_URI=http://mlflow:5000
+      - REDIS_URL=redis://redis:6379
+      - CHROMA_HOST=chromadb
+      - CHROMA_PORT=8000
+      - LLM_MODEL=${LLM_MODEL:-ollama/llama3}
+      - LLM_BASE_URL=http://ollama:11434
+      - AWS_ACCESS_KEY_ID=${AWS_ACCESS_KEY_ID:-minioadmin}
+      - AWS_SECRET_ACCESS_KEY=${AWS_SECRET_ACCESS_KEY:-minioadmin123}
+      - AWS_ENDPOINT_URL=http://minio:9000
+    command: uvicorn src.serving.app:app --host 0.0.0.0 --port 8000 --reload
+    networks:
+      - fiap-network
+    depends_on:
+      - mlflow
+      - redis
+      - chromadb
+      - ollama
+      - minio
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+# ============================================================
+# Volumes
+# ============================================================
+volumes:
+  redis_data:
+    driver: local
+  prometheus_data:
+    driver: local
+  grafana_data:
+    driver: local
+  ollama_models:
+    driver: local
+
+# ============================================================
+# Network
+# ============================================================
+networks:
+  fiap-network:
+    driver: bridge
