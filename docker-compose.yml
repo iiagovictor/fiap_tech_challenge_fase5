@@ -14,7 +14,7 @@ services:
     environment:
       - AWS_ACCESS_KEY_ID=${AWS_ACCESS_KEY_ID:-minioadmin}
       - AWS_SECRET_ACCESS_KEY=${AWS_SECRET_ACCESS_KEY:-minioadmin123}
-      - MLFLOW_S3_ENDPOINT_URL=${AWS_ENDPOINT_URL:-http://minio:9000}
+      - MLFLOW_S3_ENDPOINT_URL=${MINIO_INTERNAL_URL:-http://minio:9000}
     command: >
       mlflow server
       --backend-store-uri sqlite:///mlflow/mlflow.db
