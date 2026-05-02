@@ -27,7 +27,9 @@ jobs:
           cache: pip
 
       - name: Instalar dependências de desenvolvimento
-        run: pip install -e ".[dev]"
+        run: |
+          pip install --upgrade pip setuptools
+          pip install -e ".[dev]"
 
       - name: Verificar estilo com ruff
         run: python -m ruff check src/ tests/
@@ -52,7 +54,7 @@ jobs:
 
       - name: Instalar dependências (core + monitoring + security + dev)
         run: |
-          pip install --upgrade pip
+          pip install --upgrade pip setuptools
           pip install -e ".[monitoring,security,dev]"
 
       - name: Baixar modelo spaCy (presidio-analyzer)
