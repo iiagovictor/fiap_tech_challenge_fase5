@@ -71,3 +71,63 @@ def test_create_target_variable(sample_stock_data):
     # Check target value is within valid range [0, 1]
     target_mean = df_with_target["target"].mean()
     assert 0.0 <= target_mean <= 1.0
+
+
+def test_settings_tickers_list():
+    """Test Settings.get_tickers_list() helper."""
+    from src.config.settings import get_settings
+
+    s = get_settings()
+    tickers = s.get_tickers_list()
+    assert isinstance(tickers, list)
+    assert len(tickers) > 0
+    assert all(isinstance(t, str) for t in tickers)
+
+
+def test_settings_storage_full_path():
+    """Test Settings.get_storage_full_path() helper."""
+    from src.config.settings import get_settings
+
+    s = get_settings()
+    path = s.get_storage_full_path("models/test.keras")
+    assert "test.keras" in path
+    assert path.startswith(s.storage_uri.rstrip("/"))
+
+
+def test_settings_is_cloud_storage():
+    """Test Settings.is_cloud_storage() helper."""
+    from src.config.settings import get_settings
+
+    s = get_settings()
+    result = s.is_cloud_storage()
+    # Local storage should return False in default test environment
+    assert isinstance(result, bool)
+
+
+def test_storage_client_invalid_backend_raises():
+    """Test that an unsupported storage backend raises ValueError."""
+    import pytest
+
+    from src.config.storage import StorageClient
+
+    client = StorageClient.__new__(StorageClient)
+    client.backend = "unsupported_backend"
+    client.base_uri = "test://base"
+    with pytest.raises(ValueError, match="Unsupported storage backend"):
+        client._get_filesystem()
+
+
+def test_storage_client_gcs_branch():
+    """Test GCS branch is reachable in _get_filesystem()."""
+    from unittest.mock import MagicMock, patch
+
+    from src.config.storage import StorageClient
+
+    client = StorageClient.__new__(StorageClient)
+    client.backend = "gcs"
+    client.base_uri = "gs://bucket/base"
+    mock_fs = MagicMock()
+    with patch("src.config.storage.fsspec.filesystem", return_value=mock_fs) as mock_fsspec:
+        result = client._get_filesystem()
+        mock_fsspec.assert_called_once_with("gcs")
+    assert result is mock_fs
