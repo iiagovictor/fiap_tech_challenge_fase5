@@ -64,6 +64,23 @@ scaler = None
 feature_names = None
 
 
+def _run_drift_monitoring_pipeline() -> dict:
+    """Load and execute drift monitoring pipeline lazily to avoid import-time dependency issues."""
+    try:
+        from src.monitoring.drift import drift_monitoring_pipeline
+    except ModuleNotFoundError as e:
+        logger.error("Drift monitoring dependency missing: %s", e)
+        raise HTTPException(
+            status_code=500,
+            detail=(
+                "Drift monitoring dependencies are not installed. "
+                "Install the optional dependency 'monitoring' or configure Evidently."
+            ),
+        ) from e
+
+    return drift_monitoring_pipeline()
+
+
 def load_model_from_mlflow() -> None:
     """
     Load model from MLflow Model Registry with fallback strategy:
@@ -656,14 +673,15 @@ async def drift_report() -> dict:
     Returns drift metrics and alerts.
     """
     try:
-        # TODO: Implement actual drift detection
-        # For now, return mock response
+        result = _run_drift_monitoring_pipeline()
         return {
-            "timestamp": datetime.now().isoformat(),
-            "drift_detected": False,
-            "drift_score": 0.03,
-            "features_drifted": [],
-            "alert_level": "green",
+            "timestamp": result.get("timestamp", datetime.now().isoformat()),
+            "drift_detected": result.get("drift_detected", False),
+            "drift_score": result.get("overall_drift_score", 0.0),
+            "overall_drift_score": result.get("overall_drift_score", 0.0),
+            "features_drifted": result.get("features_drifted", []),
+            "alert_level": result.get("alert_level", "green"),
+            "report_path": result.get("report_path"),
         }
 
     except Exception as e:

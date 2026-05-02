@@ -76,12 +76,25 @@ def test_features_endpoint():
 
 def test_drift_endpoint():
     """Test /drift endpoint returns expected drift report."""
-    response = client.get("/drift")
+    mock_response = {
+        "timestamp": "2026-05-02T00:00:00",
+        "drift_detected": True,
+        "overall_drift_score": 0.24,
+        "features_drifted": ["rsi_14", "macd"],
+        "alert_level": "red",
+        "report_path": "reports/drift_report.html",
+    }
+    with patch("src.serving.app._run_drift_monitoring_pipeline", return_value=mock_response):
+        response = client.get("/drift")
+
     assert response.status_code == 200
     data = response.json()
-    assert "drift_detected" in data
-    assert "alert_level" in data
-    assert "drift_score" in data
+    assert data["drift_detected"] is True
+    assert data["alert_level"] == "red"
+    assert data["drift_score"] == 0.24
+    assert data["overall_drift_score"] == 0.24
+    assert data["features_drifted"] == ["rsi_14", "macd"]
+    assert data["report_path"] == "reports/drift_report.html"
 
 
 def test_predict_with_mock_model():
