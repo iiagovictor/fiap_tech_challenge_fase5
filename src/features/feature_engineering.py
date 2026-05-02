@@ -11,6 +11,7 @@ import numpy as np
 import pandas as pd
 
 from src.config.storage import get_storage
+from src.data.schemas import validate_features, validate_training_data
 
 logger = logging.getLogger(__name__)
 storage = get_storage()
@@ -151,6 +152,14 @@ def add_technical_indicators(df: pd.DataFrame) -> pd.DataFrame:
 
     logger.info(f"Added {len(df_features.columns) - len(df.columns)} technical indicators")
 
+    # Validate against schema
+    try:
+        df_features = validate_features(df_features)
+        logger.info("✅ Features validated against FEATURE_SET_SCHEMA")
+    except Exception as e:
+        logger.error(f"Schema validation failed: {e}")
+        raise
+
     return df_features
 
 
@@ -188,6 +197,14 @@ def create_target_variable(df: pd.DataFrame, horizon: int = 5) -> pd.DataFrame:
 
     logger.info(f"Target variable created. Rows with target: {len(df_target):,}")
     logger.info(f"Class distribution: {df_target['target'].value_counts(normalize=True).to_dict()}")
+
+    # Validate against schema
+    try:
+        df_target = validate_training_data(df_target)
+        logger.info("✅ Training data validated against TRAINING_DATA_SCHEMA")
+    except Exception as e:
+        logger.error(f"Schema validation failed: {e}")
+        raise
 
     return df_target
 

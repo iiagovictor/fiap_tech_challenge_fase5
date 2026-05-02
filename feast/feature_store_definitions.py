@@ -5,9 +5,15 @@ Defines entities, feature views, and feature services for online/offline serving
 """
 
 from datetime import timedelta
+from pathlib import Path
 
 from feast import Entity, FeatureService, FeatureView, Field, FileSource, ValueType
 from feast.types import Float32, Int64
+
+# Paths computed relative to this file so the registry works on any machine
+_FEAST_DIR = Path(__file__).parent
+_PROJECT_ROOT = _FEAST_DIR.parent
+_FEATURES_PATH = str(_PROJECT_ROOT / "data" / "features" / "stock_features.parquet")
 
 # ============================================================
 # Entity: Stock Ticker
@@ -22,7 +28,7 @@ stock = Entity(
 # Offline Source: Parquet files from storage
 # ============================================================
 stock_features_source = FileSource(
-    path="/Users/victiag/Documents/env/fiap_tech_challenge_fase5/data/features/stock_features.parquet",
+    path=_FEATURES_PATH,
     timestamp_field="date",
 )
 

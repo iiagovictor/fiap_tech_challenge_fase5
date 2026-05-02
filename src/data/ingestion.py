@@ -13,6 +13,7 @@ import yfinance as yf
 
 from src.config.settings import get_settings
 from src.config.storage import get_storage
+from src.data.schemas import validate_raw_data
 
 logger = logging.getLogger(__name__)
 settings = get_settings()
@@ -117,6 +118,14 @@ def download_stock_data(
 
     logger.info(f"Downloaded {len(df):,} rows for {df['ticker'].nunique()} tickers")
     logger.info(f"Date range: {df['date'].min()} to {df['date'].max()}")
+
+    # Validate against schema
+    try:
+        df = validate_raw_data(df)
+        logger.info("✅ Data validated against RAW_STOCK_DATA_SCHEMA")
+    except Exception as e:
+        logger.error(f"Schema validation failed: {e}")
+        raise
 
     return df
 
