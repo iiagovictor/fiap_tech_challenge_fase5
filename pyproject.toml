@@ -87,6 +87,11 @@ pipeline = [
     "dvc>=3.50.0,<3.52.0",
 ]
 
+# MLP PyTorch baseline (opcional)
+torch = [
+    "torch>=2.0.0",
+]
+
 # Desenvolvimento
 dev = [
     "setuptools>=68.0.0,<81",
