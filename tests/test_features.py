@@ -96,7 +96,7 @@ def test_create_target_variable(sample_stock_data):
 def test_feature_set_schema_validation(sample_stock_data):
     """Test FEATURE_SET_SCHEMA validates correct data."""
     df_features = add_technical_indicators(sample_stock_data)
-    
+
     # Should not raise exception
     validated_df = validate_features(df_features)
     assert len(validated_df) == len(df_features)
@@ -107,7 +107,7 @@ def test_training_data_schema_validation(sample_stock_data):
     """Test TRAINING_DATA_SCHEMA validates features with target."""
     df_features = add_technical_indicators(sample_stock_data)
     df_with_target = create_target_variable(df_features, horizon=5)
-    
+
     # Should not raise exception
     validated_df = validate_training_data(df_with_target)
     assert len(validated_df) == len(df_with_target)
@@ -116,81 +116,90 @@ def test_training_data_schema_validation(sample_stock_data):
 
 def test_schema_rejects_invalid_target():
     """Test TRAINING_DATA_SCHEMA rejects invalid target values."""
-    from pandera import SchemaError
-    
-    df_invalid = pd.DataFrame({
-        "date": pd.date_range("2024-01-01", periods=5),
-        "ticker": ["ITUB4.SA"] * 5,
-        "open": [20.0] * 5,
-        "high": [21.0] * 5,
-        "low": [19.0] * 5,
-        "close": [20.5] * 5,
-        "volume": [1000] * 5,
-        "sma_5": [20.0] * 5,
-        "sma_20": [20.0] * 5,
-        "ema_12": [20.0] * 5,
-        "ema_26": [20.0] * 5,
-        "rsi_14": [50.0] * 5,
-        "macd": [0.0] * 5,
-        "macd_signal": [0.0] * 5,
-        "macd_hist": [0.0] * 5,
-        "bb_upper": [21.0] * 5,
-        "bb_middle": [20.0] * 5,
-        "bb_lower": [19.0] * 5,
-        "bb_pct": [0.5] * 5,
-        "atr": [1.0] * 5,
-        "obv": [1000.0] * 5,
-        "mfm": [0.5] * 5,
-        "cmf": [0.5] * 5,
-        "target": [0, 1, 2, 0, 1],  # Invalid: contains 2
-    })
-    
+    from pandera.errors import SchemaError
+
+    df_invalid = pd.DataFrame(
+        {
+            "date": pd.date_range("2024-01-01", periods=5),
+            "ticker": ["ITUB4.SA"] * 5,
+            "open": [20.0] * 5,
+            "high": [21.0] * 5,
+            "low": [19.0] * 5,
+            "close": [20.5] * 5,
+            "volume": [1000] * 5,
+            "sma_5": [20.0] * 5,
+            "sma_20": [20.0] * 5,
+            "ema_12": [20.0] * 5,
+            "ema_26": [20.0] * 5,
+            "rsi_14": [50.0] * 5,
+            "macd": [0.0] * 5,
+            "macd_signal": [0.0] * 5,
+            "macd_hist": [0.0] * 5,
+            "bb_upper": [21.0] * 5,
+            "bb_middle": [20.0] * 5,
+            "bb_lower": [19.0] * 5,
+            "bb_pct": [0.5] * 5,
+            "atr": [1.0] * 5,
+            "obv": [1000.0] * 5,
+            "mfm": [0.5] * 5,
+            "cmf": [0.5] * 5,
+            "target": [0, 1, 2, 0, 1],  # Invalid: contains 2
+        }
+    )
+
     with pytest.raises(SchemaError):
         validate_training_data(df_invalid)
 
 
 def test_schema_rejects_missing_values():
     """Test TRAINING_DATA_SCHEMA rejects missing required columns."""
-    from pandera import SchemaError
-    
-    df_invalid = pd.DataFrame({
-        "date": pd.date_range("2024-01-01", periods=5),
-        "ticker": ["ITUB4.SA"] * 5,
-        # Missing other required columns
-    })
-    
+    from pandera.errors import SchemaError
+
+    df_invalid = pd.DataFrame(
+        {
+            "date": pd.date_range("2024-01-01", periods=5),
+            "ticker": ["ITUB4.SA"] * 5,
+            # Missing other required columns
+        }
+    )
+
     with pytest.raises(SchemaError):
         validate_training_data(df_invalid)
 
 
 def test_rsi_bounds_in_schema():
     """Test that RSI values in features are validated between 0-100."""
-    df = pd.DataFrame({
-        "date": pd.date_range("2024-01-01", periods=5),
-        "ticker": ["ITUB4.SA"] * 5,
-        "open": [20.0] * 5,
-        "high": [21.0] * 5,
-        "low": [19.0] * 5,
-        "close": [20.5] * 5,
-        "volume": [1000] * 5,
-        "sma_5": [20.0] * 5,
-        "sma_20": [20.0] * 5,
-        "ema_12": [20.0] * 5,
-        "ema_26": [20.0] * 5,
-        "rsi_14": [50.0] * 5,  # Valid: between 0-100
-        "macd": [0.0] * 5,
-        "macd_signal": [0.0] * 5,
-        "macd_hist": [0.0] * 5,
-        "bb_upper": [21.0] * 5,
-        "bb_middle": [20.0] * 5,
-        "bb_lower": [19.0] * 5,
-        "bb_pct": [0.5] * 5,
-        "atr": [1.0] * 5,
-        "obv": [1000.0] * 5,
-        "mfm": [0.5] * 5,
-        "cmf": [0.5] * 5,
-    })
-    
+    df = pd.DataFrame(
+        {
+            "date": pd.date_range("2024-01-01", periods=5),
+            "ticker": ["ITUB4.SA"] * 5,
+            "open": [20.0] * 5,
+            "high": [21.0] * 5,
+            "low": [19.0] * 5,
+            "close": [20.5] * 5,
+            "volume": [1000] * 5,
+            "sma_5": [20.0] * 5,
+            "sma_10": [20.0] * 5,
+            "sma_20": [20.0] * 5,
+            "sma_50": [20.0] * 5,
+            "ema_12": [20.0] * 5,
+            "ema_26": [20.0] * 5,
+            "rsi_14": [50.0] * 5,  # Valid: between 0-100
+            "macd": [0.0] * 5,
+            "macd_signal": [0.0] * 5,
+            "macd_histogram": [0.0] * 5,
+            "bb_upper": [21.0] * 5,
+            "bb_middle": [20.0] * 5,
+            "bb_lower": [19.0] * 5,
+            "bb_width": [0.1] * 5,
+            "atr_14": [1.0] * 5,
+            "obv": [1000.0] * 5,
+            "volume_ma_20": [1000.0] * 5,
+            "price_change": [0.01] * 5,
+            "price_change_5d": [0.02] * 5,
+        }
+    )
+
     # Should validate successfully
     validated_df = validate_features(df)
     assert (validated_df["rsi_14"] >= 0).all()

@@ -264,17 +264,36 @@ def baseline_df():
     """DataFrame suitable for baseline model training."""
     rng = np.random.default_rng(42)
     n = 300
+    close = rng.normal(30, 5, n)
     return pd.DataFrame(
         {
-            "rsi_14": rng.uniform(20, 80, n),
-            "macd": rng.normal(0, 1, n),
-            "sma_20": rng.normal(30, 5, n),
-            "ema_12": rng.normal(30, 5, n),
-            "bb_upper": rng.normal(35, 5, n),
-            "bb_lower": rng.normal(25, 5, n),
-            "target": rng.integers(0, 2, n),
             "date": pd.date_range("2024-01-01", periods=n),
             "ticker": "ITUB4.SA",
+            "open": rng.normal(30, 5, n),
+            "high": rng.normal(32, 5, n),
+            "low": rng.normal(28, 5, n),
+            "close": close,
+            "volume": rng.integers(100_000, 1_000_000, n),
+            "sma_5": rng.normal(30, 5, n),
+            "sma_10": rng.normal(30, 5, n),
+            "sma_20": rng.normal(30, 5, n),
+            "sma_50": rng.normal(30, 5, n),
+            "ema_12": rng.normal(30, 5, n),
+            "ema_26": rng.normal(30, 5, n),
+            "rsi_14": rng.uniform(20, 80, n),
+            "macd": rng.normal(0, 1, n),
+            "macd_signal": rng.normal(0, 0.5, n),
+            "macd_histogram": rng.normal(0, 0.5, n),
+            "bb_upper": rng.normal(35, 5, n),
+            "bb_middle": rng.normal(30, 5, n),
+            "bb_lower": rng.normal(25, 5, n),
+            "bb_width": rng.uniform(0.05, 0.3, n),
+            "atr_14": rng.uniform(0.5, 3.0, n),
+            "obv": rng.normal(0, 1_000_000, n),
+            "volume_ma_20": rng.integers(100_000, 1_000_000, n).astype(float),
+            "price_change": rng.normal(0, 0.02, n),
+            "price_change_5d": rng.normal(0, 0.05, n),
+            "target": rng.integers(0, 2, n),
         }
     )
 
