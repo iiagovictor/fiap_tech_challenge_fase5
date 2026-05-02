@@ -276,6 +276,11 @@ class TestCompareStocks:
 # ──────────────────────────────────────────────────────────────────────────────
 
 
+def _no_api():
+    """Force the httpx API call to fail so the technical-indicator fallback runs."""
+    return patch("httpx.post", side_effect=ConnectionError("no server"))
+
+
 class TestPredictStockDirection:
     def _mock_indicators(self, rsi=55.0, price=35.0, sma20=32.0, sma50=30.0):
         return {
@@ -287,8 +292,12 @@ class TestPredictStockDirection:
         }
 
     def test_fallback_returns_expected_keys(self):
-        with patch(
-            "src.agent.tools.calculate_technical_indicators", return_value=self._mock_indicators()
+        with (
+            _no_api(),
+            patch(
+                "src.agent.tools.calculate_technical_indicators",
+                return_value=self._mock_indicators(),
+            ),
         ):
             result = predict_stock_direction("ITUB4.SA")
 
@@ -304,34 +313,47 @@ class TestPredictStockDirection:
             assert key in result, f"Missing key: {key}"
 
     def test_oversold_predicts_up(self):
-        with patch(
-            "src.agent.tools.calculate_technical_indicators",
-            return_value=self._mock_indicators(rsi=20.0, price=35.0, sma20=32.0, sma50=30.0),
+        with (
+            _no_api(),
+            patch(
+                "src.agent.tools.calculate_technical_indicators",
+                return_value=self._mock_indicators(rsi=20.0, price=35.0, sma20=32.0, sma50=30.0),
+            ),
         ):
             result = predict_stock_direction("ITUB4.SA")
 
         assert result.get("prediction") == "valorização"
 
     def test_overbought_bearish_predicts_down(self):
-        with patch(
-            "src.agent.tools.calculate_technical_indicators",
-            return_value=self._mock_indicators(rsi=80.0, price=25.0, sma20=30.0, sma50=32.0),
+        with (
+            _no_api(),
+            patch(
+                "src.agent.tools.calculate_technical_indicators",
+                return_value=self._mock_indicators(rsi=80.0, price=25.0, sma20=30.0, sma50=32.0),
+            ),
         ):
             result = predict_stock_direction("ITUB4.SA")
 
         assert result.get("prediction") == "desvalorização"
 
     def test_indicators_error_propagated(self):
-        with patch(
-            "src.agent.tools.calculate_technical_indicators", return_value={"error": "no data"}
+        with (
+            _no_api(),
+            patch(
+                "src.agent.tools.calculate_technical_indicators", return_value={"error": "no data"}
+            ),
         ):
             result = predict_stock_direction("INVALID.SA")
 
         assert "error" in result
 
     def test_probability_up_and_down_sum_to_100(self):
-        with patch(
-            "src.agent.tools.calculate_technical_indicators", return_value=self._mock_indicators()
+        with (
+            _no_api(),
+            patch(
+                "src.agent.tools.calculate_technical_indicators",
+                return_value=self._mock_indicators(),
+            ),
         ):
             result = predict_stock_direction("ITUB4.SA")
 
