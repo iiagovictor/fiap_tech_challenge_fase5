@@ -5,7 +5,6 @@ import pytest
 
 from src.data.schemas import (
     FEATURE_SET_SCHEMA,
-    TRAINING_DATA_SCHEMA,
     validate_features,
     validate_training_data,
 )
