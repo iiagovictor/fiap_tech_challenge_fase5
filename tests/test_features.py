@@ -71,3 +71,34 @@ def test_create_target_variable(sample_stock_data):
     # Check target value is within valid range [0, 1]
     target_mean = df_with_target["target"].mean()
     assert 0.0 <= target_mean <= 1.0
+
+
+def test_settings_tickers_list():
+    """Test Settings.get_tickers_list() helper."""
+    from src.config.settings import get_settings
+
+    s = get_settings()
+    tickers = s.get_tickers_list()
+    assert isinstance(tickers, list)
+    assert len(tickers) > 0
+    assert all(isinstance(t, str) for t in tickers)
+
+
+def test_settings_storage_full_path():
+    """Test Settings.get_storage_full_path() helper."""
+    from src.config.settings import get_settings
+
+    s = get_settings()
+    path = s.get_storage_full_path("models/test.keras")
+    assert "test.keras" in path
+    assert path.startswith(s.storage_uri.rstrip("/"))
+
+
+def test_settings_is_cloud_storage():
+    """Test Settings.is_cloud_storage() helper."""
+    from src.config.settings import get_settings
+
+    s = get_settings()
+    result = s.is_cloud_storage()
+    # Local storage should return False in default test environment
+    assert isinstance(result, bool)
