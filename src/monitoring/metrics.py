@@ -9,9 +9,8 @@ Tracks:
 """
 
 import logging
-from typing import Any
 
-from prometheus_client import Counter, Gauge, Histogram, Summary
+from prometheus_client import Counter, Gauge, Histogram
 
 logger = logging.getLogger(__name__)
 
@@ -101,6 +100,7 @@ PII_DETECTIONS = Counter(
     "Number of PII detections",
     ["pii_type"],  # email, phone, ssn, etc.
 )
+
 
 # ============================================================
 # Helper Functions

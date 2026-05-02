@@ -1,8 +1,5 @@
 """Pytest configuration and shared fixtures."""
 
-import os
-from datetime import datetime, timedelta
-
 import pandas as pd
 import pytest
 
@@ -82,5 +79,8 @@ def mock_llm_response():
     """Mock LLM response for testing."""
     return {
         "role": "assistant",
-        "content": "Based on technical analysis, ITUB4.SA shows bullish momentum with RSI at 65 and MACD crossing above signal line.",
+        "content": (
+            "Based on technical analysis, ITUB4.SA shows bullish momentum"
+            " with RSI at 65 and MACD crossing above signal line."
+        ),
     }

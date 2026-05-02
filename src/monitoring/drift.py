@@ -28,13 +28,13 @@ def detect_drift(
 ) -> dict:
     """
     Detect data drift between reference and current datasets.
-    
+
     Args:
         reference_data: Training/reference dataset
         current_data: Current/production dataset
         feature_columns: List of feature columns to monitor (default: all numeric)
         output_path: Path to save HTML report
-    
+
     Returns:
         Dictionary with drift metrics and alerts
     """
@@ -62,8 +62,12 @@ def detect_drift(
 
     # Generate report
     report.run(
-        reference_data=reference_data[feature_columns + (["target"] if "target" in reference_data.columns else [])],
-        current_data=current_data[feature_columns + (["target"] if "target" in current_data.columns else [])],
+        reference_data=reference_data[
+            feature_columns + (["target"] if "target" in reference_data.columns else [])
+        ],
+        current_data=current_data[
+            feature_columns + (["target"] if "target" in current_data.columns else [])
+        ],
         column_mapping=column_mapping,
     )
 
@@ -120,7 +124,7 @@ def detect_drift(
         "report_path": str(output_path),
     }
 
-    logger.info(f"Drift Detection Results:")
+    logger.info("Drift Detection Results:")
     logger.info(f"  Overall Score: {overall_drift_score:.4f}")
     logger.info(f"  Alert Level: {alert_level}")
     logger.info(f"  Drifted Features: {len(drifted_features)}")
@@ -135,14 +139,14 @@ def drift_monitoring_pipeline(
 ) -> dict:
     """
     Main drift monitoring pipeline.
-    
+
     Compares reference (training) data with current (production) data.
-    
+
     Args:
         reference_path: Path to reference dataset
         current_path: Path to current dataset
         output_path: Path for drift report
-    
+
     Returns:
         Drift metrics dictionary
     """

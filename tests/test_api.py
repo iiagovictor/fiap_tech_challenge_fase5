@@ -1,6 +1,5 @@
 """Basic tests for FastAPI endpoints."""
 
-import pytest
 from fastapi.testclient import TestClient
 
 from src.serving.app import app

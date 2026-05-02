@@ -22,17 +22,17 @@ settings = get_settings()
 class StorageClient:
     """
     Unified storage interface for local and cloud storage.
-    
+
     Automatically configures the appropriate fsspec filesystem based on
     settings.storage_backend.
-    
+
     Usage:
         storage = StorageClient()
         storage.write_parquet(df, "features/stock_features.parquet")
         df = storage.read_parquet("features/stock_features.parquet")
     """
 
-    def __init__(self):
+    def __init__(self) -> None:
         self.backend = settings.storage_backend
         self.base_uri = settings.storage_uri.rstrip("/")
         self.fs = self._get_filesystem()
@@ -49,9 +49,7 @@ class StorageClient:
                 "secret": settings.aws_secret_access_key,
             }
             if settings.aws_endpoint_url:
-                storage_options["client_kwargs"] = {
-                    "endpoint_url": settings.aws_endpoint_url
-                }
+                storage_options["client_kwargs"] = {"endpoint_url": settings.aws_endpoint_url}
             return fsspec.filesystem("s3", **storage_options)
 
         elif self.backend == "gcs":
@@ -59,7 +57,8 @@ class StorageClient:
             return fsspec.filesystem("gcs")
 
         elif self.backend == "azure":
-            # Azure credentials from env (AZURE_STORAGE_CONNECTION_STRING or account_name/account_key)
+            # Azure credentials from env
+            # (AZURE_STORAGE_CONNECTION_STRING or account_name/account_key)
             return fsspec.filesystem("az")
 
         else:
@@ -114,26 +113,26 @@ class StorageClient:
         self.fs.makedirs(self.fs._parent(full_path), exist_ok=True)
         df.to_parquet(full_path, filesystem=self.fs, index=False)
 
-    def read_csv(self, path: str, **kwargs) -> pd.DataFrame:
+    def read_csv(self, path: str, **kwargs: Any) -> pd.DataFrame:  # noqa: ANN401
         """Read CSV file into DataFrame."""
         full_path = self._full_path(path)
         with self.fs.open(full_path, "r") as f:
             return pd.read_csv(f, **kwargs)
 
-    def write_csv(self, df: pd.DataFrame, path: str, **kwargs) -> None:
+    def write_csv(self, df: pd.DataFrame, path: str, **kwargs: Any) -> None:  # noqa: ANN401
         """Write DataFrame to CSV format."""
         full_path = self._full_path(path)
         self.fs.makedirs(self.fs._parent(full_path), exist_ok=True)
         with self.fs.open(full_path, "w") as f:
             df.to_csv(f, index=False, **kwargs)
 
-    def read_json(self, path: str) -> Any:
+    def read_json(self, path: str) -> Any:  # noqa: ANN401
         """Read JSON file."""
         full_path = self._full_path(path)
         with self.fs.open(full_path, "r") as f:
             return json.load(f)
 
-    def write_json(self, obj: Any, path: str, indent: int = 2) -> None:
+    def write_json(self, obj: Any, path: str, indent: int = 2) -> None:  # noqa: ANN401
         """Write object to JSON file."""
         full_path = self._full_path(path)
         self.fs.makedirs(self.fs._parent(full_path), exist_ok=True)
@@ -143,23 +142,23 @@ class StorageClient:
     # ============================================================
     # ML artifacts (joblib, Keras models)
     # ============================================================
-    def read_joblib(self, path: str) -> Any:
+    def read_joblib(self, path: str) -> Any:  # noqa: ANN401
         """Load object serialized with joblib."""
         full_path = self._full_path(path)
         with self.fs.open(full_path, "rb") as f:
             return joblib.load(f)
 
-    def write_joblib(self, obj: Any, path: str) -> None:
+    def write_joblib(self, obj: Any, path: str) -> None:  # noqa: ANN401
         """Save object with joblib."""
         full_path = self._full_path(path)
         self.fs.makedirs(self.fs._parent(full_path), exist_ok=True)
         with self.fs.open(full_path, "wb") as f:
             joblib.dump(obj, f)
 
-    def read_keras_model(self, path: str):
+    def read_keras_model(self, path: str) -> Any:  # noqa: ANN401
         """
         Load Keras model from storage.
-        
+
         Note: For cloud storage, downloads to temp file first since
         Keras load_model() doesn't support file-like objects directly.
         """
@@ -180,10 +179,10 @@ class StorageClient:
             Path(tmp_path).unlink()  # Clean up temp file
             return model
 
-    def write_keras_model(self, model, path: str) -> None:
+    def write_keras_model(self, model: Any, path: str) -> None:  # noqa: ANN401
         """
         Save Keras model to storage.
-        
+
         For cloud storage, saves to temp file first then uploads.
         """
         if self.backend == "local":

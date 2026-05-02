@@ -13,23 +13,23 @@ logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
 
-def main():
+def main() -> None:
     """Seed the ChromaDB with initial knowledge."""
     logger.info("🌱 Seeding RAG knowledge base...")
-    
+
     try:
         rag = get_rag_pipeline()
         rag.seed_knowledge_base()
         logger.info("✅ Knowledge base seeded successfully")
-        
+
         # Test retrieval
         test_query = "What is RSI?"
         results = rag.search(test_query, n_results=2)
         logger.info(f"📊 Test retrieval: Found {len(results['documents'])} documents")
-        
-        if results['documents']:
+
+        if results["documents"]:
             logger.info(f"Sample: {results['documents'][0][:100]}...")
-        
+
     except Exception as e:
         logger.error(f"❌ Failed to seed knowledge base: {e}")
         raise

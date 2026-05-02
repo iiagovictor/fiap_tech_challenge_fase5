@@ -1,7 +1,6 @@
 """Tests for model training and prediction."""
 
 import numpy as np
-import pytest
 from sklearn.preprocessing import StandardScaler
 
 from src.models.train import build_lstm_model, prepare_lstm_sequences
@@ -9,14 +8,12 @@ from src.models.train import build_lstm_model, prepare_lstm_sequences
 
 def test_prepare_lstm_sequences(sample_features):
     """Test LSTM sequence preparation."""
-    X, y, scaler, feature_names = prepare_lstm_sequences(
-        sample_features, seq_length=5
-    )
+    sequences, y, scaler, feature_names = prepare_lstm_sequences(sample_features, seq_length=5)
 
     # Check shapes
-    assert len(X.shape) == 3  # (samples, seq_length, features)
-    assert X.shape[1] == 5  # seq_length
-    assert len(y) == len(X)
+    assert len(sequences.shape) == 3  # (samples, seq_length, features)
+    assert sequences.shape[1] == 5  # seq_length
+    assert len(y) == len(sequences)
 
     # Check scaler
     assert isinstance(scaler, StandardScaler)
@@ -49,10 +46,10 @@ def test_model_prediction_shape(sample_features):
     model = build_lstm_model(input_shape=(5, 4), lstm_units=16, dropout=0.2)
 
     # Create dummy input
-    X_dummy = np.random.randn(10, 5, 4)
+    dummy_input = np.random.randn(10, 5, 4)
 
     # Predict
-    predictions = model.predict(X_dummy)
+    predictions = model.predict(dummy_input)
 
     # Check shape
     assert predictions.shape == (10, 1)

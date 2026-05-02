@@ -43,17 +43,17 @@ else:
     logger.warning("⚠️ No Groq API key found in settings")
 
 # Import litellm AFTER setting environment variables
-from litellm import completion
+from litellm import completion  # noqa: E402
 
 
 class ReactAgent:
     """
     ReAct agent for answering financial questions with tools and RAG.
-    
+
     Follows the ReAct pattern: Thought -> Action -> Observation -> Answer
     """
 
-    def __init__(self):
+    def __init__(self) -> None:
         # Initialize RAG pipeline (optional - may fail if ChromaDB unavailable or empty)
         try:
             self.rag = get_rag_pipeline()
@@ -65,7 +65,7 @@ class ReactAgent:
             else:
                 logger.warning(f"⚠️ RAG pipeline unavailable: {e}")
             self.rag = None
-        
+
         self.tools = {tool["name"]: tool["function"] for tool in TOOLS}
         self.max_iterations = 5
 
@@ -74,18 +74,18 @@ class ReactAgent:
         tool_descriptions = []
         for tool in TOOLS:
             params = ", ".join([f"{k}: {v['type']}" for k, v in tool["parameters"].items()])
-            tool_descriptions.append(
-                f"- {tool['name']}({params}): {tool['description']}"
-            )
+            tool_descriptions.append(f"- {tool['name']}({params}): {tool['description']}")
 
         tools_text = "\n".join(tool_descriptions)
 
-        return f"""You are a financial analysis assistant with access to real-time stock market data through specialized tools.
+        return f"""You are a financial analysis assistant with access to real-time
+stock market data through specialized tools.
 
 CRITICAL RULES:
 1. You MUST use tools to get real data - do NOT make up or guess numbers
 2. For questions about stocks, ALWAYS call the appropriate tool first
-3. For prediction questions (probabilidade, valorizar, vai subir, previsão), you MUST use predict_stock_direction
+3. For prediction questions (probabilidade, valorizar, vai subir, previsão),
+   you MUST use predict_stock_direction
 4. Only provide an Answer after you have executed tools and received real data
 
 Available Tools:
@@ -105,18 +105,20 @@ When you have all data:
 Answer: [Provide clear answer using the REAL DATA from tools]
 
 EXAMPLE 1 - Prediction Question:
-User: "Qual é a probabilidade do ITUB4.SA valorizar?"
+User: "Qual \u00e9 a probabilidade do ITUB4.SA valorizar?"
 
-Thought: This is a prediction question, I must use predict_stock_direction to get the model's forecast.
+Thought: This is a prediction question, I must use predict_stock_direction
+to get the model's forecast.
 Action: predict_stock_direction(ticker="ITUB4.SA")
 
 [Wait for Observation with prediction data]
 
 Thought: I received the prediction. Now I can provide a complete answer with the real probability.
-Answer: De acordo com o modelo LSTM, a probabilidade de ITUB4.SA valorizar no próximo dia útil é de [X]%, com recomendação [COMPRA/VENDA/NEUTRO].
+Answer: De acordo com o modelo LSTM, a probabilidade de ITUB4.SA valorizar
+no pr\u00f3ximo dia \u00fatil \u00e9 de [X]%, com recomenda\u00e7\u00e3o [COMPRA/VENDA/NEUTRO].
 
 EXAMPLE 2 - Price History:
-User: "Qual a cotação da PETR4.SA?"
+User: "Qual a cota\u00e7\u00e3o da PETR4.SA?"
 
 Thought: I need current price data, so I'll use get_stock_price_history.
 Action: get_stock_price_history(ticker="PETR4.SA", period="1d")
@@ -140,10 +142,13 @@ IMPORTANT: Never invent numbers - always use tools to get real data first!
                 if "GEMINI_API_KEY" not in os.environ:
                     os.environ["GEMINI_API_KEY"] = settings.google_api_key
                     logger.warning("⚠️ Had to re-export GEMINI_API_KEY")
-            
+
             logger.info(f"Calling LLM with model: {settings.llm_model}")
-            logger.debug(f"API keys in env: GOOGLE={('GOOGLE_API_KEY' in os.environ)}, GEMINI={('GEMINI_API_KEY' in os.environ)}")
-            
+            logger.debug(
+                f"API keys in env: GOOGLE={('GOOGLE_API_KEY' in os.environ)},"
+                f" GEMINI={('GEMINI_API_KEY' in os.environ)}"
+            )
+
             # Try primary model
             try:
                 response = completion(
@@ -157,7 +162,7 @@ IMPORTANT: Never invent numbers - always use tools to get real data first!
             except Exception as primary_error:
                 # If Gemini returns 503 (high demand), try a fallback model
                 if "503" in str(primary_error) or "UNAVAILABLE" in str(primary_error):
-                    logger.warning(f"⚠️ Primary model unavailable (503), trying fallback model...")
+                    logger.warning("⚠️ Primary model unavailable (503), trying fallback model...")
                     # Try gemini-1.5-flash as fallback (faster, more available)
                     fallback_model = "gemini/gemini-1.5-flash"
                     response = completion(
@@ -170,7 +175,7 @@ IMPORTANT: Never invent numbers - always use tools to get real data first!
                     return response.choices[0].message.content
                 else:
                     raise primary_error
-                    
+
         except Exception as e:
             logger.error(f"LLM call failed: {e}")
             raise  # Re-raise to trigger fallback
@@ -178,7 +183,7 @@ IMPORTANT: Never invent numbers - always use tools to get real data first!
     def _parse_action(self, text: str) -> tuple[str | None, dict]:
         """
         Parse action from agent output.
-        
+
         Expected format: Action: tool_name(param1="value1", param2="value2")
         """
         action_pattern = r"Action:\s*(\w+)\((.*?)\)"
@@ -202,7 +207,7 @@ IMPORTANT: Never invent numbers - always use tools to get real data first!
 
         return tool_name, params
 
-    def _execute_tool(self, tool_name: str, params: dict) -> Any:
+    def _execute_tool(self, tool_name: str, params: dict) -> Any:  # noqa: ANN401
         """Execute a tool with given parameters."""
         if tool_name not in self.tools:
             return f"Error: Tool '{tool_name}' not found"
@@ -218,10 +223,10 @@ IMPORTANT: Never invent numbers - always use tools to get real data first!
     def query(self, user_query: str) -> dict:
         """
         Process a user query using the ReAct pattern.
-        
+
         Args:
             user_query: User's question
-        
+
         Returns:
             Dictionary with answer, reasoning steps, and tool calls
         """
@@ -244,7 +249,9 @@ IMPORTANT: Never invent numbers - always use tools to get real data first!
             {"role": "system", "content": system_prompt},
             {
                 "role": "user",
-                "content": f"Context from knowledge base:\n{context}\n\nUser Question: {user_query}",
+                "content": (
+                    f"Context from knowledge base:\n{context}\n\n" f"User Question: {user_query}"
+                ),
             },
         ]
 
@@ -257,7 +264,7 @@ IMPORTANT: Never invent numbers - always use tools to get real data first!
             # Get LLM response
             response = self._call_llm(messages)
             reasoning_steps.append(response)
-            
+
             # Log the raw response for debugging
             logger.debug(f"📝 LLM Response:\n{response}")
 
@@ -291,12 +298,14 @@ IMPORTANT: Never invent numbers - always use tools to get real data first!
                 messages.append({"role": "user", "content": observation})
             else:
                 # No action found, ask LLM to continue
-                logger.warning(f"⚠️ No action found in response. Asking LLM to continue...")
+                logger.warning("⚠️ No action found in response. Asking LLM to continue...")
                 messages.append({"role": "assistant", "content": response})
                 messages.append(
                     {
                         "role": "user",
-                        "content": "Please continue with your analysis or provide the final answer.",
+                        "content": (
+                            "Please continue with your analysis" " or provide the final answer."
+                        ),
                     }
                 )
 
@@ -304,7 +313,10 @@ IMPORTANT: Never invent numbers - always use tools to get real data first!
         logger.warning("Max iterations reached without final answer")
         return {
             "query": user_query,
-            "answer": "I apologize, but I wasn't able to complete the analysis within the allowed steps. Please try rephrasing your question.",
+            "answer": (
+                "I apologize, but I wasn't able to complete the analysis within"
+                " the allowed steps. Please try rephrasing your question."
+            ),
             "reasoning_steps": reasoning_steps,
             "tool_calls": tool_calls,
             "iterations": self.max_iterations,

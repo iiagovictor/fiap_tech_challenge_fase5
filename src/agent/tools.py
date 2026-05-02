@@ -9,9 +9,7 @@ Provides tools for:
 """
 
 import logging
-from datetime import datetime, timedelta
 
-import pandas as pd
 import yfinance as yf
 
 logger = logging.getLogger(__name__)
@@ -20,11 +18,11 @@ logger = logging.getLogger(__name__)
 def get_stock_price_history(ticker: str, period: str = "1mo") -> dict:
     """
     Get historical stock price data.
-    
+
     Args:
         ticker: Stock ticker symbol (e.g., ITUB4.SA)
         period: Time period (1d, 5d, 1mo, 3mo, 6mo, 1y, 2y, 5y, 10y, ytd, max)
-    
+
     Returns:
         Dictionary with price history and summary statistics
     """
@@ -68,13 +66,13 @@ def get_stock_price_history(ticker: str, period: str = "1mo") -> dict:
 def calculate_technical_indicators(ticker: str, period: str = "3mo") -> dict:
     """
     Calculate technical indicators for a stock.
-    
+
     Returns RSI, MACD, Moving Averages, and Bollinger Bands.
-    
+
     Args:
         ticker: Stock ticker symbol
         period: Time period for calculation
-    
+
     Returns:
         Dictionary with technical indicators
     """
@@ -105,7 +103,6 @@ def calculate_technical_indicators(ticker: str, period: str = "3mo") -> dict:
 
         # MACD
         macd_line = ema_12 - ema_26
-        signal_line = float(close.ewm(span=12).mean().ewm(span=26).mean().iloc[-1])
         macd = macd_line
 
         # Bollinger Bands
@@ -162,34 +159,32 @@ def _interpret_indicators(rsi: float, price: float, sma_20: float, sma_50: float
 def predict_stock_direction(ticker: str) -> dict:
     """
     Predict stock price direction (valorization probability) using LSTM model.
-    
+
     If model is not available, provides technical analysis-based prediction.
-    
+
     Args:
         ticker: Stock ticker symbol (e.g., ITUB4.SA)
-    
+
     Returns:
         Dictionary with prediction, probability, and confidence
     """
     logger.info(f"Predicting stock direction for {ticker}")
-    
+
     try:
         # Try to use the model prediction via internal API call
         import httpx
-        
+
         try:
             # Call local prediction endpoint
             response = httpx.post(
-                "http://localhost:8000/predict",
-                json={"ticker": ticker},
-                timeout=5.0
+                "http://localhost:8000/predict", json={"ticker": ticker}, timeout=5.0
             )
-            
+
             if response.status_code == 200:
                 data = response.json()
                 prediction = data["prediction"]  # 1 = up, 0 = down
                 probability = data["probability"]
-                
+
                 return {
                     "ticker": ticker,
                     "prediction": "valorização" if prediction == 1 else "desvalorização",
@@ -200,24 +195,26 @@ def predict_stock_direction(ticker: str) -> dict:
                     "recommendation": _generate_recommendation(prediction, probability),
                 }
         except Exception as api_error:
-            logger.warning(f"Model API unavailable: {api_error}. Using technical indicators fallback...")
-        
+            logger.warning(
+                f"Model API unavailable: {api_error}. Using technical indicators fallback..."
+            )
+
         # Fallback: Use technical indicators to make educated guess
         indicators = calculate_technical_indicators(ticker, period="3mo")
-        
+
         if "error" in indicators:
             return {"error": indicators["error"]}
-        
+
         # Build prediction based on technical indicators
         rsi = indicators["rsi_14"]
         current_price = indicators["current_price"]
         sma_20 = indicators["sma_20"]
         sma_50 = indicators["sma_50"]
-        
+
         # Simple predictive logic based on indicators
         bullish_signals = 0
         bearish_signals = 0
-        
+
         # RSI signals
         if rsi < 30:
             bullish_signals += 2  # Oversold - likely to bounce
@@ -227,7 +224,7 @@ def predict_stock_direction(ticker: str) -> dict:
             bullish_signals += 1
         else:
             bearish_signals += 1
-        
+
         # Moving average signals
         if current_price > sma_20 > sma_50:
             bullish_signals += 2  # Strong uptrend
@@ -237,13 +234,13 @@ def predict_stock_direction(ticker: str) -> dict:
             bullish_signals += 1
         else:
             bearish_signals += 1
-        
+
         # Calculate probability
         total_signals = bullish_signals + bearish_signals
         probability_up = bullish_signals / total_signals if total_signals > 0 else 0.5
-        
+
         prediction = 1 if probability_up > 0.5 else 0
-        
+
         return {
             "ticker": ticker,
             "prediction": "valorização" if prediction == 1 else "desvalorização",
@@ -256,9 +253,9 @@ def predict_stock_direction(ticker: str) -> dict:
                 "rsi": round(rsi, 2),
                 "price_vs_sma20": "acima" if current_price > sma_20 else "abaixo",
                 "price_vs_sma50": "acima" if current_price > sma_50 else "abaixo",
-            }
+            },
         }
-        
+
     except Exception as e:
         logger.error(f"Error predicting stock direction: {e}")
         return {"error": str(e)}
@@ -283,11 +280,11 @@ def _generate_recommendation(prediction: int, probability: float) -> str:
 def compare_stocks(tickers: list[str], period: str = "1mo") -> dict:
     """
     Compare performance of multiple stocks.
-    
+
     Args:
         tickers: List of ticker symbols
         period: Time period for comparison
-    
+
     Returns:
         Dictionary with comparative analysis
     """
@@ -336,7 +333,11 @@ TOOLS = [
     },
     {
         "name": "predict_stock_direction",
-        "description": "Predict stock price direction and valorization probability using LSTM model or technical indicators. Use this for questions about 'probabilidade de valorizar', 'vai subir', 'previsão', 'prediction'.",
+        "description": (
+            "Predict stock price direction and valorization probability using LSTM"
+            " model or technical indicators. Use this for questions about"
+            " 'probabilidade de valorizar', 'vai subir', 'previs\u00e3o', 'prediction'."
+        ),
         "parameters": {
             "ticker": {"type": "string", "description": "Stock ticker symbol"},
         },

@@ -7,7 +7,6 @@ Implements champion-challenger pattern with model promotion.
 
 import logging
 from datetime import datetime
-from pathlib import Path
 
 import mlflow
 import mlflow.keras
@@ -42,12 +41,12 @@ def prepare_lstm_sequences(
 ) -> tuple[np.ndarray, np.ndarray, StandardScaler, list[str]]:
     """
     Prepare sequences for LSTM training.
-    
+
     Args:
         df: DataFrame with features and target
         seq_length: Sequence length for LSTM
         feature_columns: List of feature columns to use (default: all numeric except target)
-    
+
     Returns:
         X: Sequences array of shape (n_samples, seq_length, n_features)
         y: Target array
@@ -61,7 +60,10 @@ def prepare_lstm_sequences(
     if feature_columns is None:
         # Use all numeric columns except target and identifiers
         exclude_cols = ["date", "ticker", "target"]
-        feature_columns = [c for c in df.columns if c not in exclude_cols and df[c].dtype in [np.float64, np.float32, np.int64]]
+        numeric_dtypes = [np.float64, np.float32, np.int64]
+        feature_columns = [
+            c for c in df.columns if c not in exclude_cols and df[c].dtype in numeric_dtypes
+        ]
 
     logger.info(f"Using {len(feature_columns)} features for LSTM")
 
@@ -71,7 +73,7 @@ def prepare_lstm_sequences(
     df_scaled[feature_columns] = scaler.fit_transform(df[feature_columns])
 
     # Create sequences per ticker
-    X_list = []
+    x_list = []
     y_list = []
 
     for ticker in df["ticker"].unique():
@@ -83,16 +85,16 @@ def prepare_lstm_sequences(
 
         # Create sequences
         for i in range(len(features) - seq_length):
-            X_list.append(features[i : i + seq_length])
+            x_list.append(features[i : i + seq_length])
             y_list.append(targets[i + seq_length])
 
-    X = np.array(X_list)
+    x = np.array(x_list)
     y = np.array(y_list)
 
-    logger.info(f"Created {len(X):,} sequences of shape {X.shape}")
+    logger.info(f"Created {len(x):,} sequences of shape {x.shape}")
     logger.info(f"Class distribution: {np.bincount(y)}")
 
-    return X, y, scaler, feature_columns
+    return x, y, scaler, feature_columns
 
 
 def build_lstm_model(
@@ -102,12 +104,12 @@ def build_lstm_model(
 ) -> keras.Model:
     """
     Build LSTM model architecture (adapted from Fase 4).
-    
+
     Args:
         input_shape: (seq_length, n_features)
         lstm_units: Number of LSTM units
         dropout: Dropout rate
-    
+
     Returns:
         Compiled Keras model
     """
@@ -146,7 +148,7 @@ def train_model(
 ) -> tuple[keras.Model, dict]:
     """
     Train LSTM model with early stopping.
-    
+
     Returns:
         model: Trained Keras model
         history: Training history dict
@@ -190,7 +192,7 @@ def train_model(
 def evaluate_model(model: keras.Model, X_test: np.ndarray, y_test: np.ndarray) -> dict:
     """
     Evaluate model and return metrics.
-    
+
     Returns:
         Dictionary with accuracy, precision, recall, f1, auc
     """
@@ -223,12 +225,12 @@ def training_pipeline(
 ) -> dict:
     """
     Main training pipeline with MLflow tracking.
-    
+
     Args:
         experiment_name: MLflow experiment name
         run_name: MLflow run name
         promote_to_production: If True, promote model to Production stage
-    
+
     Returns:
         Dictionary with metrics and model info
     """
@@ -254,25 +256,25 @@ def training_pipeline(
         df = load_training_data()
 
         # Prepare sequences
-        X, y, scaler, feature_names = prepare_lstm_sequences(
+        x, y, scaler, feature_names = prepare_lstm_sequences(
             df, seq_length=settings.model_seq_length
         )
 
         # Split data
-        X_temp, X_test, y_temp, y_test = train_test_split(
-            X, y, test_size=0.2, random_state=42, stratify=y
+        x_temp, x_test, y_temp, y_test = train_test_split(
+            x, y, test_size=0.2, random_state=42, stratify=y
         )
-        X_train, X_val, y_train, y_val = train_test_split(
-            X_temp, y_temp, test_size=0.2, random_state=42, stratify=y_temp
+        x_train, x_val, y_train, y_val = train_test_split(
+            x_temp, y_temp, test_size=0.2, random_state=42, stratify=y_temp
         )
 
-        logger.info(f"Train: {len(X_train):,} | Val: {len(X_val):,} | Test: {len(X_test):,}")
+        logger.info(f"Train: {len(x_train):,} | Val: {len(x_val):,} | Test: {len(x_test):,}")
 
         # Train model
         model, history = train_model(
-            X_train,
+            x_train,
             y_train,
-            X_val,
+            x_val,
             y_val,
             lstm_units=settings.model_lstm_units,
             dropout=settings.model_dropout,
@@ -281,7 +283,7 @@ def training_pipeline(
         )
 
         # Evaluate
-        test_metrics = evaluate_model(model, X_test, y_test)
+        test_metrics = evaluate_model(model, x_test, y_test)
 
         # Log metrics
         for metric, value in test_metrics.items():
@@ -298,7 +300,7 @@ def training_pipeline(
         model_path = f"models/lstm_model_{run.info.run_id}.keras"
         storage.write_keras_model(model, model_path)
         logger.info(f"Saved model to {model_path}")
-        
+
         # Also save as "latest" for easy loading by API
         model_latest_path = "models/lstm_model_latest.keras"
         storage.write_keras_model(model, model_latest_path)
@@ -308,7 +310,7 @@ def training_pipeline(
         scaler_path = f"models/scaler_{run.info.run_id}.pkl"
         storage.write_joblib(scaler, scaler_path)
         logger.info(f"Saved scaler to {scaler_path}")
-        
+
         # Also save as "latest"
         scaler_latest_path = "models/scaler_latest.pkl"
         storage.write_joblib(scaler, scaler_latest_path)
