@@ -106,6 +106,6 @@ def validate_training_data(df: pd.DataFrame) -> pd.DataFrame:
     return TRAINING_DATA_SCHEMA.validate(df)
 
 
-def validate_test_features(df) -> pd.DataFrame:
+def validate_test_features(df: pd.DataFrame) -> pd.DataFrame:
     """Validate test features against schema."""
     return TEST_FEATURES_SCHEMA.validate(df)
