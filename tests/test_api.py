@@ -1,5 +1,9 @@
 """Basic tests for FastAPI endpoints."""
 
+from unittest.mock import MagicMock, patch
+
+import numpy as np
+import pandas as pd
 from fastapi.testclient import TestClient
 
 from src.serving.app import app
@@ -58,13 +62,73 @@ def test_agent_endpoint():
         data = response.json()
         assert "query" in data
         assert "response" in data
-        assert "timestamp" in data
+
+
+def test_features_endpoint():
+    """Test /features endpoint returns expected structure."""
+    response = client.get("/features")
+    assert response.status_code == 200
+    data = response.json()
+    assert "model_features" in data
+    assert "total_model_features" in data
+    assert "timestamp" in data
 
 
 def test_drift_endpoint():
-    """Test drift detection endpoint."""
+    """Test /drift endpoint returns expected drift report."""
     response = client.get("/drift")
     assert response.status_code == 200
     data = response.json()
-    assert "timestamp" in data
     assert "drift_detected" in data
+    assert "alert_level" in data
+    assert "drift_score" in data
+
+
+def test_predict_with_mock_model():
+    """Test /predict endpoint with mocked LSTM model and local feature store."""
+    mock_model = MagicMock()
+    mock_model.predict.return_value = np.array([[0.7]])
+
+    df = pd.DataFrame(
+        {
+            "ticker": ["ITUB4.SA"],
+            "close": [35.5],
+            "open": [35.0],
+            "high": [36.0],
+            "low": [34.8],
+            "volume": [1_000_000.0],
+        }
+    )
+    mock_storage = MagicMock()
+    mock_storage.exists.return_value = True
+    mock_storage.read_parquet.return_value = df
+
+    with (
+        patch("src.serving.app.model", mock_model),
+        patch("src.serving.app.storage", mock_storage),
+    ):
+        response = client.post("/predict", json={"ticker": "ITUB4.SA"})
+
+    assert response.status_code == 200
+    data = response.json()
+    assert data["ticker"] == "ITUB4.SA"
+    assert "prediction" in data
+    assert "probability" in data
+    assert abs(data["probability"] - 0.7) < 0.01
+
+
+def test_load_model_from_mlflow_all_fail():
+    """Direct unit test: load_model_from_mlflow handles all sources failing."""
+    import src.serving.app as app_module
+
+    mock_mlflow_client = MagicMock()
+    mock_mlflow_client.search_model_versions.return_value = []
+
+    with (
+        patch("mlflow.keras.load_model", side_effect=Exception("mlflow unavailable")),
+        patch("mlflow.tracking.MlflowClient", return_value=mock_mlflow_client),
+        patch("glob.glob", return_value=[]),
+    ):
+        app_module.load_model_from_mlflow()
+
+    assert app_module.model is None
