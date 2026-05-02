@@ -9,7 +9,6 @@ from datetime import datetime
 
 import pandas as pd
 
-from feast import FeatureStore
 from src.config.settings import get_settings
 
 logger = logging.getLogger(__name__)
@@ -35,6 +34,8 @@ class FeastClient:
         Args:
             repo_path: Path to Feast repository (default: from settings)
         """
+        from feast import FeatureStore  # lazy import — feast is an optional dependency
+
         self.repo_path = repo_path or settings.feast_repo_path
         self.store = FeatureStore(repo_path=self.repo_path)
         logger.info(f"Initialized Feast Feature Store from {self.repo_path}")
