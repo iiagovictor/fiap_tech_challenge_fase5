@@ -169,28 +169,15 @@ class RAGPipeline:
     def seed_knowledge_base(self) -> None:
         """Seed the knowledge base with initial financial analysis content."""
         documents = [
-            "RSI (Relative Strength Index) is a momentum indicator that measures the"
-            " speed and magnitude of price changes. Values above 70 indicate overbought"
-            " conditions, while values below 30 suggest oversold conditions.",
-            "MACD (Moving Average Convergence Divergence) is a trend-following momentum"
-            " indicator that shows the relationship between two moving averages. When MACD"
-            " crosses above the signal line, it suggests a bullish signal.",
-            "Bollinger Bands consist of a middle band (SMA) and two outer bands"
-            " (standard deviations). When price touches the upper band, the stock may be"
-            " overbought; touching the lower band may indicate oversold conditions.",
-            "Moving averages smooth out price data to identify trends. A golden cross"
-            " occurs when a short-term MA crosses above a long-term MA, signaling"
-            " potential upward momentum.",
-            "Volume analysis is crucial for confirming price movements. Increasing volume"
-            " during an uptrend validates the strength of the movement.",
-            "Support and resistance levels are price points where stocks tend to reverse"
-            " direction. Breaking through resistance can signal continued upward movement.",
-            "Brazilian stock market (B3) operates with stocks ending in .SA suffix."
-            " IBOVESPA (^BVSP) is the main index tracking the most traded stocks.",
-            "Bank stocks like ITUB4 (Itaú) and BBDC4 (Bradesco) are influenced by"
-            " interest rates, economic growth, and credit quality.",
-            "Commodity-related stocks like VALE3 (Vale - mining) and PETR4 (Petrobras -"
-            " oil) are affected by global commodity prices and currency fluctuations.",
+            "RSI (Relative Strength Index) is a momentum indicator that measures the speed and magnitude of price changes. Values above 70 indicate overbought conditions, while values below 30 suggest oversold conditions.",  # noqa: E501
+            "MACD (Moving Average Convergence Divergence) is a trend-following momentum indicator that shows the relationship between two moving averages. When MACD crosses above the signal line, it suggests a bullish signal.",  # noqa: E501
+            "Bollinger Bands consist of a middle band (SMA) and two outer bands (standard deviations). When price touches the upper band, the stock may be overbought; touching the lower band may indicate oversold conditions.",  # noqa: E501
+            "Moving averages smooth out price data to identify trends. A golden cross occurs when a short-term MA crosses above a long-term MA, signaling potential upward momentum.",  # noqa: E501
+            "Volume analysis is crucial for confirming price movements. Increasing volume during an uptrend validates the strength of the movement.",  # noqa: E501
+            "Support and resistance levels are price points where stocks tend to reverse direction. Breaking through resistance can signal continued upward movement.",  # noqa: E501
+            "Brazilian stock market (B3) operates with stocks ending in .SA suffix. IBOVESPA (^BVSP) is the main index tracking the most traded stocks.",  # noqa: E501
+            "Bank stocks like ITUB4 (Itaú) and BBDC4 (Bradesco) are influenced by interest rates, economic growth, and credit quality.",  # noqa: E501
+            "Commodity-related stocks like VALE3 (Vale - mining) and PETR4 (Petrobras - oil) are affected by global commodity prices and currency fluctuations.",  # noqa: E501
         ]
 
         metadatas = [
