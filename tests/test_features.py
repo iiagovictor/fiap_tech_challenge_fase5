@@ -115,3 +115,19 @@ def test_storage_client_invalid_backend_raises():
     client.base_uri = "test://base"
     with pytest.raises(ValueError, match="Unsupported storage backend"):
         client._get_filesystem()
+
+
+def test_storage_client_gcs_branch():
+    """Test GCS branch is reachable in _get_filesystem()."""
+    from unittest.mock import MagicMock, patch
+
+    from src.config.storage import StorageClient
+
+    client = StorageClient.__new__(StorageClient)
+    client.backend = "gcs"
+    client.base_uri = "gs://bucket/base"
+    mock_fs = MagicMock()
+    with patch("src.config.storage.fsspec.filesystem", return_value=mock_fs) as mock_fsspec:
+        result = client._get_filesystem()
+        mock_fsspec.assert_called_once_with("gcs")
+    assert result is mock_fs
