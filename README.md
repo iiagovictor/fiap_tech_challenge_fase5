@@ -407,13 +407,43 @@ print(f'Target distribution:\n{df[\"target_5d\"].value_counts(normalize=True)}')
 "
 ```
 
+### Etapa 3 — Validação de Schema com Pandera
+
+Todos os estágios do pipeline incluem **validação de dados com Pandera** para garantir qualidade:
+
+| Etapa | Schema | Validações |
+|---|---|---|
+| **Raw Data** | `RAW_STOCK_DATA_SCHEMA` | Preços > 0, high ≥ low, sem duplicatas |
+| **Features** | `FEATURE_SET_SCHEMA` | Colunas requeridas, RSI ∈ [0,100], tipos de dados |
+| **Training Data** | `TRAINING_DATA_SCHEMA` | Target ∈ {0,1}, sem NULLs em features críticas |
+
+**Como funciona:**
+- `src/data/ingestion.py` valida raw data após download
+- `src/features/feature_engineering.py` valida features antes de salvar
+- `src/models/baseline.py` valida dados de treino antes de usar
+- `tests/test_features.py` testa schemas com Pandera assertions
+
+**Exemplo de uso direto:**
+```python
+from src.data.schemas import validate_training_data, validate_features
+import pandas as pd
+
+df_raw = pd.read_parquet('data/raw/raw_stock_data.parquet')
+df_features = pd.read_parquet('data/features/stock_features.parquet')
+
+# Validar manualmente
+validate_features(df_features)      # Lança SchemaError se inválido
+validate_training_data(df_features) # Valida também a coluna 'target'
+print("✅ Todos os schemas validados!")
+```
+
 ---
 
 ## Feature Store com Feast
 
 O Feast gerencia features offline (Parquet) e online (Redis) para servir predições em produção.
 
-### Etapa 3 — Aplicar definições do Feature Store
+### Etapa 4 — Aplicar definições do Feature Store
 
 ```bash
 make feast-apply

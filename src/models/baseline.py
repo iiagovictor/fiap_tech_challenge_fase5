@@ -14,6 +14,7 @@ from sklearn.model_selection import train_test_split
 from sklearn.preprocessing import StandardScaler
 
 from src.config.storage import get_storage
+from src.data.schemas import validate_training_data
 
 logger = logging.getLogger(__name__)
 storage = get_storage()
@@ -30,6 +31,14 @@ def train_baseline_models(features_path: str = "features/stock_features.parquet"
 
     # Load data
     df = storage.read_parquet(features_path)
+
+    # Validate data against schema
+    try:
+        df = validate_training_data(df)
+        logger.info("✅ Training data validated against TRAINING_DATA_SCHEMA")
+    except Exception as e:
+        logger.error(f"Schema validation failed: {e}")
+        raise
 
     # Select numeric features
     exclude_cols = ["date", "ticker", "target"]
