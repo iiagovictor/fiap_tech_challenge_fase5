@@ -102,3 +102,16 @@ def test_settings_is_cloud_storage():
     result = s.is_cloud_storage()
     # Local storage should return False in default test environment
     assert isinstance(result, bool)
+
+
+def test_storage_client_invalid_backend_raises():
+    """Test that an unsupported storage backend raises ValueError."""
+    import pytest
+
+    from src.config.storage import StorageClient
+
+    client = StorageClient.__new__(StorageClient)
+    client.backend = "unsupported_backend"
+    client.base_uri = "test://base"
+    with pytest.raises(ValueError, match="Unsupported storage backend"):
+        client._get_filesystem()
