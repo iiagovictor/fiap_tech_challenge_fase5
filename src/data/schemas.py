@@ -8,7 +8,6 @@ import pandas as pd
 import pandera as pa
 from pandera import Column, DataFrameSchema
 
-
 # ============================================================
 # Raw Stock Data Schema
 # ============================================================
@@ -92,17 +91,17 @@ TEST_FEATURES_SCHEMA = DataFrameSchema(
 )
 
 
-def validate_raw_data(df) -> pd.DataFrame:
+def validate_raw_data(df: pd.DataFrame) -> pd.DataFrame:
     """Validate raw stock data against schema."""
     return RAW_STOCK_DATA_SCHEMA.validate(df)
 
 
-def validate_features(df) -> pd.DataFrame:
+def validate_features(df: pd.DataFrame) -> pd.DataFrame:
     """Validate feature set against schema."""
     return FEATURE_SET_SCHEMA.validate(df)
 
 
-def validate_training_data(df) -> pd.DataFrame:
+def validate_training_data(df: pd.DataFrame) -> pd.DataFrame:
     """Validate training dataset against schema."""
     return TRAINING_DATA_SCHEMA.validate(df)
 
