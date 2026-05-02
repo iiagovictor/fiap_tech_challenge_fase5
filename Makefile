@@ -6,8 +6,20 @@
 # Detectar OS e configurar caminhos apropriados
 ifeq ($(OS),Windows_NT)
     PYTHON := $(CURDIR)\.venv\Scripts\python.exe
+    PYTHON_ALT := $(CURDIR)\.venv\Scripts\python
+    LOAD_ENV :=
+    GET_DATE := powershell -Command "Get-Date -AsUTC -Format 'o'"
+    KILL_PORT := taskkill /F /IM uvicorn.exe 2>nul || echo "✅ Nenhum processo na porta 8000"
+    SLEEP_CMD := timeout /t 15 /nobreak
+    MKDIR_CMD := mkdir
 else
     PYTHON := $(CURDIR)/.venv/bin/python
+    PYTHON_ALT := $(PYTHON)
+    LOAD_ENV := set -a && source .env && set +a &&
+    GET_DATE := date -u +%Y-%m-%dT%H:%M:%S
+    KILL_PORT := lsof -ti:8000 | xargs kill -9 2>/dev/null || echo "✅ Nenhum processo na porta 8000"
+    SLEEP_CMD := sleep 15
+    MKDIR_CMD := mkdir -p
 endif
 COMPOSE := docker compose
 PROJECT := fiap-tc-fase5
@@ -36,13 +48,13 @@ install-feast:  ## Instala Feature Store (Feast + Redis)
 
 dev-install:  ## Instala dependências de desenvolvimento
 	$(PYTHON) -m pip install -e ".[dev]"
-	.venv/bin/pre-commit install
+	$(PYTHON_ALT) -m pre_commit install
 
 # ─── Local Infrastructure (Docker) ───────────────────────────────────────────
 setup-infra:  ## Sobe MLflow, Redis, Prometheus, Grafana
 	$(COMPOSE) up -d
 	@echo "⏳ Aguardando serviços iniciarem..."
-	@sleep 15
+	@$(SLEEP_CMD)
 	@echo "──────────────────────────────────────────"
 	@echo "  ✅ Infraestrutura pronta!"
 	@echo "  🔬 MLflow:     http://localhost:5001"
@@ -64,16 +76,16 @@ data-features:  ## Gera features técnicas (RSI, MACD, EMAs, Bollinger)
 
 # ─── Feature Store (Feast) ────────────────────────────────────────────────────
 feast-apply:  ## Aplica definições do Feature Store
-	@mkdir -p feast/data/feast
-	cd feast && ../.venv/bin/feast apply
+	@$(MKDIR_CMD) feast/data/feast
+	cd feast && $(PYTHON_ALT) -m feast apply
 
 feast-materialize:  ## Materializa features no Redis (online store)
 	@echo "⚠️  Certifique-se que o Redis está rodando (make setup-infra)"
-	@mkdir -p feast/data/feast
-	cd feast && ../.venv/bin/feast materialize-incremental $$(date -u +%Y-%m-%dT%H:%M:%S)
+	@$(MKDIR_CMD) feast/data/feast
+	cd feast && $(PYTHON_ALT) -m feast materialize-incremental $$($(GET_DATE))
 
 feast-ui:  ## Abre Feast Web UI (porta 8888)
-	cd feast && ../.venv/bin/feast ui
+	cd feast && $(PYTHON_ALT) -m feast ui
 
 # ─── RAG Knowledge Base ───────────────────────────────────────────────────────
 seed-rag:  ## Popula ChromaDB com conhecimento inicial (análise técnica)
@@ -82,10 +94,10 @@ seed-rag:  ## Popula ChromaDB com conhecimento inicial (análise técnica)
 
 # ─── Training ─────────────────────────────────────────────────────────────────
 train:  ## Treina modelo LSTM e registra no MLflow
-	@set -a && source .env && set +a && $(PYTHON) -m src.models.train
+	$(LOAD_ENV) $(PYTHON) -m src.models.train
 
 train-baseline:  ## Treina apenas baselines (LogReg + RF) sem LSTM
-	@set -a && source .env && set +a && $(PYTHON) -m src.models.baseline
+	$(LOAD_ENV) $(PYTHON) -m src.models.baseline
 
 # ─── Serving ──────────────────────────────────────────────────────────────────
 serve:  ## Inicia API FastAPI local (porta 8000)
@@ -96,7 +108,7 @@ serve-alt:  ## Inicia API em porta alternativa (8001)
 
 stop-serve:  ## Para o servidor na porta 8000
 	@echo "🛑 Parando servidor na porta 8000..."
-	@lsof -ti:8000 | xargs kill -9 2>/dev/null || echo "✅ Nenhum processo na porta 8000"
+	@$(KILL_PORT)
 
 serve-docker:  ## Inicia API em container Docker
 	docker build -t $(PROJECT)-serving -f src/serving/Dockerfile .
