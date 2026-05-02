@@ -167,6 +167,7 @@ def drift_monitoring_pipeline(
     else:
         logger.info(f"Loading current data from {current_path}")
         current_data = storage.read_parquet(current_path)
+        reference_subset = reference_data
 
     logger.info(f"Current data: {len(current_data)} rows")
 
