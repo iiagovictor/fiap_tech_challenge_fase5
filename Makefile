@@ -104,23 +104,23 @@ serve-docker:  ## Inicia API em container Docker
 
 # ─── Tests ────────────────────────────────────────────────────────────────────
 test:  ## Executa testes unitários
-	pytest tests/ -v
+	$(PYTHON) -m pytest tests/ -v
 
 test-cov:  ## Executa testes com relatório de cobertura HTML
-	pytest tests/ -v --cov=src --cov-report=html --cov-fail-under=60
+	$(PYTHON) -m pytest tests/ -v --cov=src --cov-report=html --cov-fail-under=60
 	@echo "📊 Relatório de cobertura: htmlcov/index.html"
 
 test-smoke:  ## Smoke test rápido (apenas health check)
-	pytest tests/test_api.py::test_health -v
+	$(PYTHON) -m pytest tests/test_api.py::test_health -v
 
 # ─── Code Quality ─────────────────────────────────────────────────────────────
 lint:  ## Executa ruff e mypy
-	ruff check src/ tests/
-	mypy src/ --ignore-missing-imports
+	$(PYTHON) -m ruff check src/ tests/
+	$(PYTHON) -m mypy src/ --ignore-missing-imports
 
 format:  ## Formata código com ruff
-	ruff format src/ tests/
-	ruff check --fix src/ tests/
+	$(PYTHON) -m ruff format src/ tests/
+	$(PYTHON) -m ruff check --fix src/ tests/
 
 # ─── DVC ──────────────────────────────────────────────────────────────────────
 dvc-init:  ## Inicializa DVC (primeira vez)
