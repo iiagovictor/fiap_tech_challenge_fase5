@@ -6,11 +6,10 @@ Provides methods to retrieve features for online (real-time) and offline (batch)
 
 import logging
 from datetime import datetime
-from typing import Any
 
 import pandas as pd
-from feast import FeatureStore
 
+from feast import FeatureStore
 from src.config.settings import get_settings
 
 logger = logging.getLogger(__name__)
@@ -20,7 +19,7 @@ settings = get_settings()
 class FeastClient:
     """
     Wrapper around Feast FeatureStore for simplified feature retrieval.
-    
+
     Usage:
         client = FeastClient()
         features = client.get_online_features(
@@ -29,10 +28,10 @@ class FeastClient:
         )
     """
 
-    def __init__(self, repo_path: str | None = None):
+    def __init__(self, repo_path: str | None = None) -> None:
         """
         Initialize Feast client.
-        
+
         Args:
             repo_path: Path to Feast repository (default: from settings)
         """
@@ -45,11 +44,11 @@ class FeastClient:
     ) -> pd.DataFrame:
         """
         Retrieve features from online store for real-time prediction.
-        
+
         Args:
             ticker: Single ticker or list of tickers
             timestamp: Request timestamp (default: now)
-        
+
         Returns:
             DataFrame with features for the requested entities
         """
@@ -111,11 +110,11 @@ class FeastClient:
     ) -> pd.DataFrame:
         """
         Retrieve historical features from offline store for batch training.
-        
+
         Args:
             entity_df: DataFrame with columns ['ticker', 'event_timestamp']
             features: List of features to retrieve (default: all from service)
-        
+
         Returns:
             DataFrame with historical features joined to entity_df
         """
@@ -139,10 +138,10 @@ class FeastClient:
     ) -> None:
         """
         Materialize features to online store.
-        
+
         This loads features from the offline store (Parquet) into Redis
         for low-latency online serving.
-        
+
         Args:
             start_date: Start of materialization window
             end_date: End of materialization window (default: now)
@@ -150,9 +149,7 @@ class FeastClient:
         if end_date is None:
             end_date = datetime.now()
 
-        logger.info(
-            f"Materializing features from {start_date} to {end_date} to online store..."
-        )
+        logger.info(f"Materializing features from {start_date} to {end_date} to online store...")
 
         self.store.materialize(
             start_date=start_date,

@@ -7,7 +7,6 @@ Used for benchmarking against LSTM model.
 import logging
 
 import numpy as np
-import pandas as pd
 from sklearn.ensemble import RandomForestClassifier
 from sklearn.linear_model import LogisticRegression
 from sklearn.metrics import accuracy_score, f1_score, precision_score, recall_score, roc_auc_score
@@ -23,7 +22,7 @@ storage = get_storage()
 def train_baseline_models(features_path: str = "features/stock_features.parquet") -> dict:
     """
     Train baseline models (LR, RF) for comparison.
-    
+
     Returns:
         Dictionary with metrics for each baseline model
     """
@@ -34,29 +33,32 @@ def train_baseline_models(features_path: str = "features/stock_features.parquet"
 
     # Select numeric features
     exclude_cols = ["date", "ticker", "target"]
-    feature_cols = [c for c in df.columns if c not in exclude_cols and df[c].dtype in [np.float64, np.float32, np.int64]]
+    numeric_dtypes = [np.float64, np.float32, np.int64]
+    feature_cols = [
+        c for c in df.columns if c not in exclude_cols and df[c].dtype in numeric_dtypes
+    ]
 
-    X = df[feature_cols].values
+    x = df[feature_cols].values
     y = df["target"].values
 
     # Split data
-    X_train, X_test, y_train, y_test = train_test_split(
-        X, y, test_size=0.2, random_state=42, stratify=y
+    x_train, x_test, y_train, y_test = train_test_split(
+        x, y, test_size=0.2, random_state=42, stratify=y
     )
 
     # Scale features
     scaler = StandardScaler()
-    X_train_scaled = scaler.fit_transform(X_train)
-    X_test_scaled = scaler.transform(X_test)
+    x_train_scaled = scaler.fit_transform(x_train)
+    x_test_scaled = scaler.transform(x_test)
 
     results = {}
 
     # Logistic Regression
     logger.info("Training Logistic Regression...")
     lr = LogisticRegression(max_iter=1000, random_state=42)
-    lr.fit(X_train_scaled, y_train)
-    y_pred_lr = lr.predict(X_test_scaled)
-    y_proba_lr = lr.predict_proba(X_test_scaled)[:, 1]
+    lr.fit(x_train_scaled, y_train)
+    y_pred_lr = lr.predict(x_test_scaled)
+    y_proba_lr = lr.predict_proba(x_test_scaled)[:, 1]
 
     results["logistic_regression"] = {
         "accuracy": accuracy_score(y_test, y_pred_lr),
@@ -69,9 +71,9 @@ def train_baseline_models(features_path: str = "features/stock_features.parquet"
     # Random Forest
     logger.info("Training Random Forest...")
     rf = RandomForestClassifier(n_estimators=100, max_depth=10, random_state=42)
-    rf.fit(X_train_scaled, y_train)
-    y_pred_rf = rf.predict(X_test_scaled)
-    y_proba_rf = rf.predict_proba(X_test_scaled)[:, 1]
+    rf.fit(x_train_scaled, y_train)
+    y_pred_rf = rf.predict(x_test_scaled)
+    y_proba_rf = rf.predict_proba(x_test_scaled)[:, 1]
 
     results["random_forest"] = {
         "accuracy": accuracy_score(y_test, y_pred_rf),

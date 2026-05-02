@@ -10,7 +10,6 @@ Detects and redacts sensitive information from text:
 """
 
 import logging
-from typing import Any
 
 from presidio_analyzer import AnalyzerEngine
 from presidio_anonymizer import AnonymizerEngine
@@ -21,14 +20,14 @@ logger = logging.getLogger(__name__)
 class PIIDetector:
     """
     PII detector using Microsoft Presidio.
-    
+
     Detects and optionally redacts PII from text.
     """
 
-    def __init__(self, languages: list[str] | None = None):
+    def __init__(self, languages: list[str] | None = None) -> None:
         """
         Initialize PII detector.
-        
+
         Args:
             languages: List of languages to support (default: ["en", "pt"])
         """
@@ -40,11 +39,11 @@ class PIIDetector:
     def detect(self, text: str, language: str = "en") -> list[dict]:
         """
         Detect PII in text.
-        
+
         Args:
             text: Input text to analyze
             language: Language code (en, pt, etc.)
-        
+
         Returns:
             List of detected PII entities with type, score, and location
         """
@@ -82,11 +81,11 @@ class PIIDetector:
     def anonymize(self, text: str, language: str = "en") -> str:
         """
         Anonymize PII in text by replacing with placeholders.
-        
+
         Args:
             text: Input text
             language: Language code
-        
+
         Returns:
             Anonymized text with PII replaced by placeholders
         """
@@ -113,12 +112,12 @@ class PIIDetector:
     def has_pii(self, text: str, language: str = "en", threshold: float = 0.5) -> bool:
         """
         Check if text contains PII above confidence threshold.
-        
+
         Args:
             text: Input text
             language: Language code
             threshold: Minimum confidence score (0-1)
-        
+
         Returns:
             True if PII detected above threshold
         """

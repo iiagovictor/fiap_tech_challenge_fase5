@@ -6,7 +6,7 @@ Handles yfinance MultiIndex columns correctly (fix for tuple columns bug).
 """
 
 import logging
-from datetime import datetime, timedelta
+from datetime import datetime
 
 import pandas as pd
 import yfinance as yf
@@ -27,16 +27,16 @@ def download_stock_data(
 ) -> pd.DataFrame:
     """
     Download historical stock data from Yahoo Finance.
-    
+
     Args:
         tickers: List of ticker symbols (e.g., ["ITUB4.SA", "PETR4.SA"])
         start_date: Start date in YYYY-MM-DD format
         end_date: End date in YYYY-MM-DD format (default: today)
         interval: Data interval (1d, 1h, etc.)
-    
+
     Returns:
         DataFrame with columns: [date, ticker, open, high, low, close, volume]
-    
+
     Raises:
         ValueError: If no data is downloaded
     """
@@ -49,9 +49,7 @@ def download_stock_data(
     if end_date is None:
         end_date = datetime.now().strftime("%Y-%m-%d")
 
-    logger.info(
-        f"Downloading data for {len(tickers)} tickers from {start_date} to {end_date}"
-    )
+    logger.info(f"Downloading data for {len(tickers)} tickers from {start_date} to {end_date}")
 
     # Download data using yfinance
     # Use group_by='column' for easier processing (avoids MultiIndex ticker complexity)
@@ -73,7 +71,7 @@ def download_stock_data(
     # ============================================================
     # Reset index to convert Date from index to column
     df = df.reset_index()
-    
+
     if len(tickers) == 1:
         # Single ticker: simple column names (Open, High, Low, Close, Volume, Date)
         df.columns = [str(c).lower() for c in df.columns]
@@ -84,37 +82,36 @@ def download_stock_data(
         if isinstance(df.columns, pd.MultiIndex):
             # Melt the DataFrame to long format
             df_melted_list = []
-            
+
             for ticker in tickers:
-                df_ticker = df.copy()
                 # Extract columns for this ticker
                 ticker_data = {}
                 ticker_data["date"] = df["Date"] if "Date" in df.columns else df.index
-                
+
                 for col in ["Open", "High", "Low", "Close", "Volume"]:
                     if (col, ticker) in df.columns:
                         ticker_data[col.lower()] = df[(col, ticker)]
-                
+
                 df_ticker_clean = pd.DataFrame(ticker_data)
                 df_ticker_clean["ticker"] = ticker
                 df_melted_list.append(df_ticker_clean)
-            
+
             df = pd.concat(df_melted_list, ignore_index=True)
         else:
             # Fallback: simple columns
             df.columns = [str(c).lower() for c in df.columns]
             if "ticker" not in df.columns and len(tickers) == 1:
                 df["ticker"] = tickers[0]
-    
+
     # Standardize column names
     if "Date" in df.columns:
         df.rename(columns={"Date": "date"}, inplace=True)
-    
+
     # Select and order standard columns
     standard_columns = ["date", "ticker", "open", "high", "low", "close", "volume"]
     available_columns = [c for c in standard_columns if c in df.columns]
     df = df[available_columns].copy()
-    
+
     # Sort by date and ticker
     df = df.sort_values(["date", "ticker"]).reset_index(drop=True)
 
@@ -127,11 +124,11 @@ def download_stock_data(
 def save_raw_data(df: pd.DataFrame, filename: str = "raw_stock_data.parquet") -> str:
     """
     Save raw stock data to storage.
-    
+
     Args:
         df: DataFrame with stock data
         filename: Output filename (default: raw_stock_data.parquet)
-    
+
     Returns:
         Full path where data was saved
     """
@@ -144,10 +141,10 @@ def save_raw_data(df: pd.DataFrame, filename: str = "raw_stock_data.parquet") ->
 def load_raw_data(filename: str = "raw_stock_data.parquet") -> pd.DataFrame:
     """
     Load raw stock data from storage.
-    
+
     Args:
         filename: Input filename
-    
+
     Returns:
         DataFrame with stock data
     """
@@ -163,10 +160,10 @@ def load_raw_data(filename: str = "raw_stock_data.parquet") -> pd.DataFrame:
 def ingest_pipeline(force_download: bool = False) -> pd.DataFrame:
     """
     Main ingestion pipeline: download data and save to storage.
-    
+
     Args:
         force_download: If True, always download. If False, load from storage if exists.
-    
+
     Returns:
         DataFrame with raw stock data
     """

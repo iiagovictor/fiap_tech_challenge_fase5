@@ -32,7 +32,7 @@ def calculate_macd(
 ) -> tuple[pd.Series, pd.Series, pd.Series]:
     """
     Calculate MACD (Moving Average Convergence Divergence).
-    
+
     Returns:
         macd, signal_line, histogram
     """
@@ -51,7 +51,7 @@ def calculate_bollinger_bands(
 ) -> tuple[pd.Series, pd.Series, pd.Series]:
     """
     Calculate Bollinger Bands.
-    
+
     Returns:
         upper_band, middle_band, lower_band
     """
@@ -64,9 +64,7 @@ def calculate_bollinger_bands(
     return upper, middle, lower
 
 
-def calculate_atr(
-    high: pd.Series, low: pd.Series, close: pd.Series, period: int = 14
-) -> pd.Series:
+def calculate_atr(high: pd.Series, low: pd.Series, close: pd.Series, period: int = 14) -> pd.Series:
     """Calculate Average True Range (ATR)."""
     high_low = high - low
     high_close = np.abs(high - close.shift())
@@ -80,22 +78,17 @@ def calculate_atr(
 
 def calculate_obv(close: pd.Series, volume: pd.Series) -> pd.Series:
     """Calculate On-Balance Volume (OBV)."""
-    obv = (
-        np.sign(close.diff())
-        .fillna(0)
-        .mul(volume)
-        .cumsum()
-    )
+    obv = np.sign(close.diff()).fillna(0).mul(volume).cumsum()
     return obv
 
 
 def add_technical_indicators(df: pd.DataFrame) -> pd.DataFrame:
     """
     Add technical indicators to stock data.
-    
+
     Args:
         df: DataFrame with columns [date, ticker, open, high, low, close, volume]
-    
+
     Returns:
         DataFrame with added technical indicator columns
     """
@@ -139,9 +132,7 @@ def add_technical_indicators(df: pd.DataFrame) -> pd.DataFrame:
         group["bb_width"] = (bb_upper - bb_lower) / bb_middle
 
         # ATR (Average True Range)
-        group["atr_14"] = calculate_atr(
-            group["high"], group["low"], group["close"], period=14
-        )
+        group["atr_14"] = calculate_atr(group["high"], group["low"], group["close"], period=14)
 
         # OBV (On-Balance Volume)
         group["obv"] = calculate_obv(group["close"], group["volume"])
@@ -166,11 +157,11 @@ def add_technical_indicators(df: pd.DataFrame) -> pd.DataFrame:
 def create_target_variable(df: pd.DataFrame, horizon: int = 5) -> pd.DataFrame:
     """
     Create target variable: binary direction of price movement after N days.
-    
+
     Args:
         df: DataFrame with stock data and features
         horizon: Number of days to look ahead (default: 5)
-    
+
     Returns:
         DataFrame with added 'target' column (1 = up, 0 = down)
     """
@@ -179,7 +170,7 @@ def create_target_variable(df: pd.DataFrame, horizon: int = 5) -> pd.DataFrame:
     df = df.sort_values(["ticker", "date"]).reset_index(drop=True)
 
     result_dfs = []
-    for ticker, group in df.groupby("ticker"):
+    for _ticker, group in df.groupby("ticker"):
         group = group.copy()
 
         # Future close price after N days
@@ -196,9 +187,7 @@ def create_target_variable(df: pd.DataFrame, horizon: int = 5) -> pd.DataFrame:
     df_target = df_target.dropna(subset=["target"])
 
     logger.info(f"Target variable created. Rows with target: {len(df_target):,}")
-    logger.info(
-        f"Class distribution: {df_target['target'].value_counts(normalize=True).to_dict()}"
-    )
+    logger.info(f"Class distribution: {df_target['target'].value_counts(normalize=True).to_dict()}")
 
     return df_target
 
@@ -210,12 +199,12 @@ def feature_engineering_pipeline(
 ) -> pd.DataFrame:
     """
     Main feature engineering pipeline.
-    
+
     Args:
         input_path: Path to raw stock data
         output_path: Path to save engineered features
         target_horizon: Days ahead for target variable
-    
+
     Returns:
         DataFrame with features and target
     """
