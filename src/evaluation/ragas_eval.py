@@ -15,7 +15,7 @@ import json
 import os
 import urllib.error
 import urllib.request
-from typing import Any, Dict, Optional, Type
+from typing import Any
 
 import pandas as pd
 from ragas import evaluate
@@ -37,9 +37,9 @@ class OllamaRagasLLM(InstructorBaseRagasLLM):
         model: str,
         endpoint: str = "http://127.0.0.1:11434",
         temperature: float = 0.1,
-        system_prompt: Optional[str] = None,
-        request_kwargs: Optional[Dict[str, Any]] = None,
-    ):
+        system_prompt: str | None = None,
+        request_kwargs: dict[str, Any] | None = None,
+    ) -> None:
         self.model = model
         self.endpoint = endpoint.rstrip("/")
         self.temperature = temperature
@@ -51,7 +51,7 @@ class OllamaRagasLLM(InstructorBaseRagasLLM):
             return f"{self.system_prompt}\n\n{prompt}"
         return prompt
 
-    def _send_request(self, prompt: str) -> Dict[str, Any]:
+    def _send_request(self, prompt: str) -> dict[str, Any]:
         payload = {
             "model": self.model,
             "prompt": prompt,
@@ -77,10 +77,11 @@ class OllamaRagasLLM(InstructorBaseRagasLLM):
             ) from exc
         except urllib.error.URLError as exc:
             raise RuntimeError(
-                "Unable to connect to Ollama. Ensure the server is running and OLLAMA_API_URL is correct."
+                "Unable to connect to Ollama. Ensure the server is running "
+                "and OLLAMA_API_URL is correct."
             ) from exc
 
-    def _extract_text(self, response: Any) -> str:
+    def _extract_text(self, response: object) -> str:
         if isinstance(response, dict):
             if "choices" in response and response["choices"]:
                 first = response["choices"][0]
@@ -100,7 +101,7 @@ class OllamaRagasLLM(InstructorBaseRagasLLM):
         raise ValueError("Cannot parse Ollama response body into text.")
 
     def _parse_structured_output(
-        self, text: str, response_model: Type[InstructorTypeVar]
+        self, text: str, response_model: type[InstructorTypeVar]
     ) -> InstructorTypeVar:
         trimmed = text.strip()
         if not trimmed:
@@ -112,22 +113,18 @@ class OllamaRagasLLM(InstructorBaseRagasLLM):
             start = trimmed.find("{")
             end = trimmed.rfind("}")
             if start == -1 or end == -1:
-                raise RuntimeError(
-                    "Ollama response could not be parsed as JSON."
-                ) from exc
+                raise RuntimeError("Ollama response could not be parsed as JSON.") from exc
             parsed = json.loads(trimmed[start : end + 1])
 
         return response_model.parse_obj(parsed)
 
-    def generate(
-        self, prompt: str, response_model: Type[InstructorTypeVar]
-    ) -> InstructorTypeVar:
+    def generate(self, prompt: str, response_model: type[InstructorTypeVar]) -> InstructorTypeVar:
         response = self._send_request(self._build_prompt(prompt))
         prompt_text = self._extract_text(response)
         return self._parse_structured_output(prompt_text, response_model)
 
     async def agenerate(
-        self, prompt: str, response_model: Type[InstructorTypeVar]
+        self, prompt: str, response_model: type[InstructorTypeVar]
     ) -> InstructorTypeVar:
         return await asyncio.to_thread(self.generate, prompt, response_model)
 
@@ -140,42 +137,81 @@ def build_sample_dataset() -> EvaluationDataset:
         {
             "user_input": "What is the main objective of the FIAP Tech Challenge Fase 5 project?",
             "retrieved_contexts": [
-                "FIAP Tech Challenge Fase 5 is a cloud-agnostic MLOps/LLMOps platform for financial data analytics, monitoring, and model serving."
+                "FIAP Tech Challenge Fase 5 is a cloud-agnostic MLOps/LLMOps platform "
+                "for financial data analytics, monitoring, and model serving."
             ],
-            "response": "The project aims to build a cloud-agnostic MLOps/LLMOps platform for financial analysis, model serving, and drift-aware monitoring.",
-            "reference": "The project builds a cloud-agnostic MLOps/LLMOps platform for financial analysis using RAG, monitoring, and API serving capabilities.",
+            "response": (
+                "The project aims to build a cloud-agnostic MLOps/LLMOps platform "
+                "for financial analysis, model serving, and drift-aware monitoring."
+            ),
+            "reference": (
+                "The project builds a cloud-agnostic MLOps/LLMOps platform for financial "
+                "analysis using RAG, monitoring, and API serving capabilities."
+            ),
         },
         {
             "user_input": "How does the RAG pipeline work in this project?",
             "retrieved_contexts": [
-                "The RAG pipeline retrieves documents from ChromaDB and uses a language model to generate answers based on retrieved context."
+                "The RAG pipeline retrieves documents from ChromaDB and uses a language "
+                "model to generate answers based on retrieved context."
             ],
-            "response": "The RAG pipeline retrieves relevant documents from the vector store and uses an LLM to generate context-aware answers.",
-            "reference": "The RAG pipeline retrieves information from ChromaDB vector database and uses language models to generate context-aware answers about the system and financial data.",
+            "response": (
+                "The RAG pipeline retrieves relevant documents from the vector store "
+                "and uses an LLM to generate context-aware answers."
+            ),
+            "reference": (
+                "The RAG pipeline retrieves information from ChromaDB vector database and "
+                "uses language models to generate context-aware answers about the system "
+                "and financial data."
+            ),
         },
         {
             "user_input": "What is drift monitoring and how is it implemented?",
             "retrieved_contexts": [
-                "Drift monitoring is implemented with Evidently to compare reference and current data distributions and detect drift in model inputs."
+                "Drift monitoring is implemented with Evidently to compare reference and "
+                "current data distributions and detect drift in model inputs."
             ],
-            "response": "Drift monitoring compares historical data distributions with current inputs using Evidently to identify concept and data drift.",
-            "reference": "Drift monitoring uses Evidently to detect data distribution changes, comparing reference datasets with current data to identify drift in ML model inputs and predictions.",
+            "response": (
+                "Drift monitoring compares historical data distributions with current "
+                "inputs using Evidently to identify concept and data drift."
+            ),
+            "reference": (
+                "Drift monitoring uses Evidently to detect data distribution changes, "
+                "comparing reference datasets with current data to identify drift in "
+                "ML model inputs and predictions."
+            ),
         },
         {
             "user_input": "How can I use the API endpoints for prediction?",
             "retrieved_contexts": [
-                "The FastAPI application serves endpoints for prediction, health checks, and drift monitoring."
+                "The FastAPI application serves endpoints for prediction, health checks, "
+                "and drift monitoring."
             ],
-            "response": "Use the /predict endpoint with JSON payload to obtain model predictions, and /health to verify service status.",
-            "reference": "The API provides REST endpoints for prediction, health monitoring, and drift detection, using FastAPI framework with proper validation and metrics collection.",
+            "response": (
+                "Use the /predict endpoint with JSON payload to obtain model predictions, "
+                "and /health to verify service status."
+            ),
+            "reference": (
+                "The API provides REST endpoints for prediction, health monitoring, and "
+                "drift detection, using FastAPI framework with proper validation and "
+                "metrics collection."
+            ),
         },
         {
             "user_input": "What is the role of the feature store in this system?",
             "retrieved_contexts": [
-                "Feast stores and serves machine learning features in MinIO and coordinates metadata in the registry."
+                "Feast stores and serves machine learning features in MinIO and "
+                "coordinates metadata in the registry."
             ],
-            "response": "The feature store stores and serves features for training and inference, using Feast with MinIO as storage.",
-            "reference": "The feature store uses Feast to manage ML features, storing them in MinIO with metadata in PostgreSQL, enabling both real-time and batch feature serving.",
+            "response": (
+                "The feature store stores and serves features for training and inference, "
+                "using Feast with MinIO as storage."
+            ),
+            "reference": (
+                "The feature store uses Feast to manage ML features, storing them in MinIO "
+                "with metadata in PostgreSQL, enabling both real-time and batch feature "
+                "serving."
+            ),
         },
     ]
     return EvaluationDataset.from_list(samples)

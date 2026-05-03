@@ -35,7 +35,10 @@ def test_score_response_partial_match():
 
 def test_evaluate_golden_set_summary():
     sample_responses = {
-        "gs-001": "A tendência de curto prazo é de alta moderada, com suporte próximo à média móvel de 20 dias e RSI neutro.",
+        "gs-001": (
+            "A tendência de curto prazo é de alta moderada, com suporte próximo "
+            "à média móvel de 20 dias e RSI neutro."
+        ),
         "gs-002": "VALE3.SA está quase em sobrecompra, mas ainda não passou de 70 no RSI.",
     }
     summary = evaluate_golden_set(sample_responses)
