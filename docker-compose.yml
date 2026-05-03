@@ -1,5 +1,3 @@
-version: '3.8'
-
 services:
   # ============================================================
   # MLflow — Model Registry & Tracking Server
