@@ -1,0 +1,1100 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>InvestAI — Apresentação Técnica</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"/>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;600&family=Poppins:wght@300;400;600;700;800;900&family=Inter:wght@300;400;500;600&display=swap"/>
+<style>
+  :root {
+    --bg:       #060811;
+    --surface:  #0e1120;
+    --card:     #131627;
+    --card2:    #1a1f35;
+    --accent1:  #7c6cfc;
+    --accent2:  #00e5b0;
+    --accent3:  #ff6b6b;
+    --accent4:  #ffb347;
+    --blue:     #4a9eff;
+    --text:     #dde1f0;
+    --muted:    #6b7280;
+    --border:   #22273d;
+    --code-bg:  #0d1117;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html, body {
+    width: 100%; height: 100%;
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'Inter', sans-serif;
+    overflow: hidden;
+  }
+
+  /* ─── Deck & Slides ─────────────────────────────────────── */
+  .deck { width: 100vw; height: 100vh; position: relative; overflow: hidden; }
+
+  .slide {
+    position: absolute; inset: 0;
+    display: flex; flex-direction: column;
+    align-items: center; justify-content: center;
+    padding: 44px 60px;
+    opacity: 0;
+    transform: translateY(40px);
+    transition: opacity .45s cubic-bezier(.4,0,.2,1), transform .45s cubic-bezier(.4,0,.2,1);
+    pointer-events: none;
+  }
+  .slide.active { opacity: 1; transform: translateY(0); pointer-events: auto; }
+  .slide.exit   { opacity: 0; transform: translateY(-40px); }
+
+  /* ─── Progress ──────────────────────────────────────────── */
+  .progress-bar {
+    position: fixed; top: 0; left: 0;
+    height: 3px;
+    background: linear-gradient(90deg, var(--accent1), var(--accent2));
+    transition: width .4s ease; z-index: 100;
+  }
+
+  /* ─── Navigation ────────────────────────────────────────── */
+  .nav {
+    position: fixed; bottom: 28px; left: 50%;
+    transform: translateX(-50%);
+    display: flex; align-items: center; gap: 14px;
+    background: rgba(19,22,39,.9);
+    backdrop-filter: blur(12px);
+    border: 1px solid var(--border);
+    border-radius: 50px; padding: 8px 22px;
+    z-index: 100;
+  }
+  .nav button {
+    background: none; border: none; color: var(--muted);
+    font-size: 18px; cursor: pointer; transition: color .2s; padding: 4px;
+  }
+  .nav button:hover { color: var(--text); }
+  .nav .slide-count { font-family: 'JetBrains Mono', monospace; font-size: 12px; color: var(--muted); min-width: 56px; text-align: center; }
+  .dot { width: 5px; height: 5px; border-radius: 50%; background: var(--border); transition: all .3s; cursor: pointer; }
+  .dot.active { background: var(--accent1); width: 18px; border-radius: 3px; }
+  .dots { display: flex; gap: 5px; align-items: center; }
+
+  /* ─── Shared typography ─────────────────────────────────── */
+  h1 { font-family: 'Poppins', sans-serif; font-weight: 800; line-height: 1.1; }
+  h2 { font-family: 'Poppins', sans-serif; font-weight: 700; line-height: 1.2; }
+  h3 { font-family: 'Poppins', sans-serif; font-weight: 600; }
+
+  .tag {
+    display: inline-flex; align-items: center; gap: 6px;
+    padding: 4px 14px; border-radius: 20px;
+    font-size: 11px; font-weight: 700; letter-spacing: .1em;
+    text-transform: uppercase; margin-bottom: 18px;
+  }
+  .tag.purple { background: rgba(124,108,252,.18); color: var(--accent1); border:1px solid rgba(124,108,252,.3); }
+  .tag.teal   { background: rgba(0,229,176,.12);   color: var(--accent2); border:1px solid rgba(0,229,176,.2); }
+  .tag.red    { background: rgba(255,107,107,.12);  color: var(--accent3); border:1px solid rgba(255,107,107,.2); }
+  .tag.gold   { background: rgba(255,179,71,.12);   color: var(--accent4); border:1px solid rgba(255,179,71,.2); }
+  .tag.blue   { background: rgba(74,158,255,.12);   color: var(--blue);   border:1px solid rgba(74,158,255,.2); }
+
+  .grad { background: linear-gradient(135deg, var(--accent1), var(--accent2)); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text; }
+
+  .card {
+    background: var(--card); border: 1px solid var(--border);
+    border-radius: 18px; padding: 24px; position: relative; overflow: hidden;
+    transition: border-color .3s, transform .3s;
+  }
+  .card:hover { border-color: var(--accent1); transform: translateY(-3px); }
+  .card::before {
+    content: ''; position: absolute; top: 0; left: 0; right: 0; height: 2px;
+    background: linear-gradient(90deg, var(--accent1), var(--accent2));
+    opacity: 0; transition: opacity .3s;
+  }
+  .card:hover::before { opacity: 1; }
+
+  /* ─── Code block ────────────────────────────────────────── */
+  pre, code {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 13px;
+  }
+  .code-block {
+    background: var(--code-bg);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 18px 22px;
+    overflow: auto;
+    text-align: left;
+    width: 100%;
+    line-height: 1.7;
+  }
+  .kw  { color: var(--accent1); }
+  .fn  { color: var(--accent2); }
+  .st  { color: var(--accent4); }
+  .cm  { color: var(--muted); }
+  .nu  { color: var(--accent3); }
+
+  /* ─── Arch diagram ──────────────────────────────────────── */
+  .arch {
+    display: flex; align-items: stretch; gap: 0;
+    width: 100%; max-width: 1000px;
+    margin-top: 28px;
+    border: 1px solid var(--border);
+    border-radius: 20px; overflow: hidden;
+  }
+  .arch-col {
+    flex: 1;
+    background: var(--card);
+    padding: 20px 16px;
+    border-right: 1px solid var(--border);
+    display: flex; flex-direction: column; gap: 10px;
+  }
+  .arch-col:last-child { border-right: none; }
+  .arch-col .col-title {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 11px; font-weight: 600;
+    color: var(--muted);
+    letter-spacing: .08em;
+    text-transform: uppercase;
+    margin-bottom: 4px;
+    padding-bottom: 10px;
+    border-bottom: 1px solid var(--border);
+  }
+  .arch-item {
+    background: var(--card2);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 10px 12px;
+    font-size: 13px;
+    display: flex; align-items: center; gap: 8px;
+  }
+  .arch-item .dot-col { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; }
+
+  /* ─── Flow / Pipeline ──────────────────────────────────── */
+  .pipeline {
+    display: flex; align-items: center; gap: 0;
+    flex-wrap: nowrap; max-width: 960px; width: 100%;
+    margin-top: 28px;
+  }
+  .pipe-step {
+    flex: 1;
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 14px;
+    padding: 16px 12px;
+    text-align: center;
+    position: relative;
+  }
+  .pipe-step .step-num {
+    position: absolute; top: -10px; left: 50%; transform: translateX(-50%);
+    background: var(--accent1); color: #fff;
+    font-family: 'JetBrains Mono', monospace; font-size: 11px; font-weight: 700;
+    width: 22px; height: 22px; border-radius: 50%;
+    display: flex; align-items: center; justify-content: center;
+  }
+  .pipe-step .step-icon { font-size: 24px; margin-bottom: 8px; }
+  .pipe-step h3 { font-size: 12px; font-weight: 600; margin-bottom: 4px; }
+  .pipe-step p  { font-size: 11px; color: var(--muted); line-height: 1.4; }
+  .pipe-arrow { font-size: 18px; color: var(--muted); margin: 0 4px; flex-shrink: 0; }
+
+  /* ─── Metric table ──────────────────────────────────────── */
+  .metric-row {
+    display: flex; align-items: center; gap: 16px;
+    background: var(--card); border: 1px solid var(--border);
+    border-radius: 12px; padding: 14px 20px;
+    margin-bottom: 10px; width: 100%; max-width: 840px;
+  }
+  .metric-row .m-label { flex: 1; font-size: 14px; font-weight: 500; }
+  .metric-row .m-bar-wrap { flex: 2; height: 8px; background: var(--border); border-radius: 4px; overflow: hidden; }
+  .metric-row .m-bar { height: 100%; border-radius: 4px; background: linear-gradient(90deg, var(--accent1), var(--accent2)); }
+  .metric-row .m-val { font-family: 'JetBrains Mono', monospace; font-size: 14px; font-weight: 600; min-width: 60px; text-align: right; }
+
+  /* ─── Background grid ───────────────────────────────────── */
+  .bg-grid {
+    position: fixed; inset: 0; z-index: -1;
+    background-image:
+      linear-gradient(rgba(124,108,252,.04) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(124,108,252,.04) 1px, transparent 1px);
+    background-size: 40px 40px;
+  }
+  .orb {
+    position: fixed; border-radius: 50%; filter: blur(100px);
+    pointer-events: none; z-index: -1;
+  }
+  .orb1 { width:500px;height:500px; background:rgba(124,108,252,.07); top:-180px;right:-180px; }
+  .orb2 { width:400px;height:400px; background:rgba(0,229,176,.05);  bottom:-120px;left:-120px; }
+
+  /* ─── Kbd hint ──────────────────────────────────────────── */
+  .kbd-hint {
+    position: fixed; top: 18px; right: 24px;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 11px; color: var(--muted);
+    display: flex; gap: 6px; align-items: center;
+  }
+  kbd {
+    background: var(--card); border: 1px solid var(--border);
+    border-radius: 4px; padding: 2px 7px;
+    font-family: 'JetBrains Mono', monospace; font-size: 10px;
+  }
+
+  /* ─── Slide 1: Cover ────────────────────────────────────── */
+  #s1 { background: radial-gradient(ellipse 70% 50% at 50% 0%, rgba(124,108,252,.2) 0%, transparent 60%), var(--bg); }
+  #s1 .logo-ring {
+    width: 90px; height: 90px; border-radius: 50%;
+    border: 2px solid var(--accent1);
+    display: flex; align-items: center; justify-content: center;
+    font-size: 44px; margin: 0 auto 28px;
+    box-shadow: 0 0 40px rgba(124,108,252,.3), inset 0 0 40px rgba(124,108,252,.1);
+    animation: pulse-ring 2.5s ease-in-out infinite;
+  }
+  @keyframes pulse-ring {
+    0%,100% { box-shadow: 0 0 40px rgba(124,108,252,.3), inset 0 0 40px rgba(124,108,252,.1); }
+    50%      { box-shadow: 0 0 70px rgba(124,108,252,.5), inset 0 0 60px rgba(124,108,252,.2); }
+  }
+  #s1 h1 { font-size: clamp(38px,5.5vw,72px); text-align: center; }
+  #s1 .stack-line {
+    display: flex; flex-wrap: wrap; justify-content: center; gap: 8px;
+    margin-top: 28px; max-width: 720px;
+  }
+  #s1 .stack-chip {
+    font-family: 'JetBrains Mono', monospace; font-size: 12px;
+    padding: 4px 12px; background: var(--card); border: 1px solid var(--border);
+    border-radius: 6px; color: var(--muted);
+  }
+
+  /* ─── Slide 2: Visão geral da arquitetura ───────────────── */
+  #s2 .two-col {
+    display: grid; grid-template-columns: 1fr 1.4fr; gap: 20px;
+    max-width: 960px; width: 100%; margin-top: 24px;
+  }
+  .layer-stack { display: flex; flex-direction: column; gap: 10px; }
+  .layer {
+    background: var(--card); border: 1px solid var(--border);
+    border-radius: 12px; padding: 14px 18px;
+    display: flex; align-items: center; gap: 12px; font-size: 14px;
+  }
+  .layer .l-dot { width: 10px; height: 10px; border-radius: 2px; flex-shrink: 0; }
+  .layer .l-name { font-weight: 600; min-width: 120px; }
+  .layer .l-detail { font-size: 12px; color: var(--muted); }
+
+  /* ─── Slide 3: Data Pipeline ────────────────────────────── */
+
+  /* ─── Slide 4: LSTM ─────────────────────────────────────── */
+  #s4 .lstm-layout {
+    display: grid; grid-template-columns: 1.2fr .8fr; gap: 20px;
+    max-width: 960px; width: 100%; margin-top: 24px;
+    align-items: start;
+  }
+  .lstm-diagram {
+    background: var(--card); border: 1px solid var(--border);
+    border-radius: 16px; padding: 24px; display: flex; flex-direction: column; gap: 10px;
+  }
+  .lstm-block {
+    border-radius: 10px; padding: 10px 16px;
+    font-size: 13px; font-weight: 600; text-align: center;
+    display: flex; align-items: center; justify-content: space-between;
+  }
+  .lstm-block .dim {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 11px; font-weight: 400; color: var(--muted);
+  }
+  .lstm-block.input  { background: rgba(74,158,255,.15); border: 1px solid rgba(74,158,255,.3); }
+  .lstm-block.lstm1  { background: rgba(124,108,252,.2); border: 1px solid rgba(124,108,252,.4); }
+  .lstm-block.drop   { background: rgba(255,107,107,.1); border: 1px solid rgba(255,107,107,.25); }
+  .lstm-block.lstm2  { background: rgba(124,108,252,.15); border: 1px solid rgba(124,108,252,.3); }
+  .lstm-block.dense  { background: rgba(0,229,176,.12); border: 1px solid rgba(0,229,176,.3); }
+  .lstm-block.output { background: rgba(255,179,71,.12); border: 1px solid rgba(255,179,71,.3); }
+  .lstm-arrow { text-align: center; font-size: 16px; color: var(--muted); }
+
+  /* ─── Slide 5: RAG Agent ────────────────────────────────── */
+  #s5 .rag-flow {
+    display: grid; grid-template-columns: 1fr auto 1fr; gap: 0;
+    align-items: start; max-width: 940px; width: 100%; margin-top: 24px;
+  }
+  .rag-col { display: flex; flex-direction: column; gap: 10px; }
+  .rag-center {
+    display: flex; flex-direction: column; align-items: center;
+    justify-content: center; margin: 0 20px;
+    gap: 8px; padding-top: 60px;
+  }
+  .rag-arrow { font-size: 22px; color: var(--accent2); }
+  .rag-item {
+    background: var(--card); border: 1px solid var(--border);
+    border-radius: 12px; padding: 14px 16px; font-size: 13px;
+  }
+  .rag-item .ri-title { font-weight: 600; margin-bottom: 4px; }
+  .rag-item .ri-sub   { font-size: 11px; color: var(--muted); }
+  .rag-center-box {
+    background: linear-gradient(135deg, rgba(124,108,252,.2), rgba(0,229,176,.1));
+    border: 1px solid var(--accent1);
+    border-radius: 16px; padding: 20px 18px; text-align: center; min-width: 140px;
+  }
+  .rag-center-box .rb-icon { font-size: 32px; margin-bottom: 8px; }
+  .rag-center-box h3 { font-size: 14px; font-weight: 700; }
+  .rag-center-box p  { font-size: 11px; color: var(--muted); margin-top: 4px; }
+
+  /* ─── Slide 6: MLflow + DVC ─────────────────────────────── */
+  #s6 .mlops-grid {
+    display: grid; grid-template-columns: 1fr 1fr; gap: 18px;
+    max-width: 900px; width: 100%; margin-top: 24px;
+  }
+
+  /* ─── Slide 7: Monitoring ───────────────────────────────── */
+  #s7 .mon-grid {
+    display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 16px;
+    max-width: 900px; width: 100%; margin-top: 24px;
+  }
+  .mon-card {
+    background: var(--card); border: 1px solid var(--border);
+    border-radius: 16px; padding: 20px;
+  }
+  .mon-card .mon-icon { font-size: 28px; margin-bottom: 10px; }
+  .mon-card h3 { font-size: 14px; margin-bottom: 6px; }
+  .mon-card ul { list-style: none; display: flex; flex-direction: column; gap: 5px; }
+  .mon-card ul li { font-size: 12px; color: var(--muted); display: flex; align-items: flex-start; gap: 6px; }
+  .mon-card ul li::before { content: '▸'; color: var(--accent2); font-weight: 700; flex-shrink: 0; }
+
+  /* ─── Slide 8: Evaluation ───────────────────────────────── */
+  #s8 .eval-layout {
+    display: grid; grid-template-columns: 1fr 1fr; gap: 20px;
+    max-width: 920px; width: 100%; margin-top: 24px; align-items: start;
+  }
+
+  /* ─── Slide 9: Security ─────────────────────────────────── */
+  #s9 .owasp-list {
+    display: grid; grid-template-columns: 1fr 1fr; gap: 10px;
+    max-width: 900px; width: 100%; margin-top: 24px;
+  }
+  .owasp-item {
+    background: var(--card); border: 1px solid var(--border);
+    border-radius: 12px; padding: 14px 18px; display: flex; gap: 12px; align-items: flex-start;
+  }
+  .owasp-item .o-num {
+    font-family: 'JetBrains Mono', monospace; font-size: 12px; font-weight: 700;
+    color: var(--accent1); min-width: 32px; padding-top: 2px;
+  }
+  .owasp-item h3 { font-size: 13px; font-weight: 600; margin-bottom: 2px; }
+  .owasp-item p  { font-size: 11px; color: var(--muted); line-height: 1.4; }
+
+  /* ─── Slide 10: API Reference ──────────────────────────── */
+  #s10 .api-table {
+    max-width: 840px; width: 100%; margin-top: 24px;
+    display: flex; flex-direction: column; gap: 10px;
+  }
+  .api-row {
+    background: var(--card); border: 1px solid var(--border);
+    border-radius: 12px; padding: 14px 20px;
+    display: flex; align-items: center; gap: 16px;
+  }
+  .method {
+    font-family: 'JetBrains Mono', monospace; font-size: 12px; font-weight: 700;
+    padding: 3px 10px; border-radius: 6px; min-width: 54px; text-align: center;
+  }
+  .method.get  { background: rgba(0,229,176,.15); color: var(--accent2); border: 1px solid rgba(0,229,176,.3); }
+  .method.post { background: rgba(124,108,252,.15); color: var(--accent1); border: 1px solid rgba(124,108,252,.3); }
+  .api-path { font-family: 'JetBrains Mono', monospace; font-size: 13px; min-width: 140px; }
+  .api-desc { font-size: 13px; color: var(--muted); flex: 1; }
+  .api-rate {
+    font-family: 'JetBrains Mono', monospace; font-size: 11px;
+    color: var(--accent4); background: rgba(255,179,71,.1);
+    border: 1px solid rgba(255,179,71,.2); border-radius: 6px;
+    padding: 2px 8px; white-space: nowrap;
+  }
+
+  /* ─── Slide 11: Tests ───────────────────────────────────── */
+  #s11 .test-layout {
+    display: grid; grid-template-columns: 1fr 1.2fr; gap: 20px;
+    max-width: 920px; width: 100%; margin-top: 24px; align-items: start;
+  }
+  .test-item {
+    display: flex; align-items: center; gap: 10px;
+    padding: 10px 16px; background: var(--card);
+    border: 1px solid var(--border); border-radius: 10px;
+    margin-bottom: 8px; font-size: 13px;
+  }
+  .test-pass { color: var(--accent2); font-weight: 700; font-family: 'JetBrains Mono', monospace; }
+
+  /* ─── Slide 12: Final ───────────────────────────────────── */
+  #s12 {
+    background: radial-gradient(ellipse 60% 50% at 50% 110%, rgba(0,229,176,.12) 0%, transparent 60%), var(--bg);
+  }
+  #s12 h1 { font-size: clamp(32px,4.5vw,60px); text-align: center; max-width: 780px; }
+  #s12 .final-grid {
+    display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px;
+    max-width: 840px; width: 100%; margin-top: 36px;
+  }
+  .final-card {
+    background: var(--card); border: 1px solid var(--border);
+    border-radius: 16px; padding: 22px 18px; text-align: center;
+  }
+  .final-card .fc-icon { font-size: 32px; margin-bottom: 10px; }
+  .final-card h3 { font-size: 14px; margin-bottom: 6px; }
+  .final-card p  { font-size: 12px; color: var(--muted); line-height: 1.5; }
+  .final-card .fc-num {
+    font-family: 'JetBrains Mono', monospace; font-size: 28px; font-weight: 700;
+    background: linear-gradient(135deg, var(--accent1), var(--accent2));
+    -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text;
+    display: block; margin-bottom: 6px;
+  }
+</style>
+</head>
+<body>
+
+<div class="bg-grid"></div>
+<div class="orb orb1"></div>
+<div class="orb orb2"></div>
+<div class="progress-bar" id="progress"></div>
+<div class="kbd-hint"><kbd>←</kbd><kbd>→</kbd> navegar &nbsp;|&nbsp; <kbd>F</kbd> fullscreen</div>
+
+<div class="deck" id="deck">
+
+  <!-- ══════════════════════════════════════════════════════
+       SLIDE 1 · CAPA TÉCNICA
+  ══════════════════════════════════════════════════════════ -->
+  <div class="slide" id="s1">
+    <div class="logo-ring">⚡</div>
+    <div class="tag purple">Arquitetura Técnica &middot; FIAP &middot; Pós-Tech Machine Learning Engineer</div>
+    <h1><span class="grad">Plataforma MLOps</span></h1>
+    <h1 style="font-size:clamp(18px,2.5vw,32px); font-weight:300; color:var(--muted); margin-top:8px">
+      Arquitetura production-grade demonstrada com um modelo de previsão de ativos
+    </h1>
+    <div class="stack-line">
+      <span class="stack-chip">LSTM · Keras</span>
+      <span class="stack-chip">FastAPI</span>
+      <span class="stack-chip">LiteLLM · ChromaDB</span>
+      <span class="stack-chip">MLflow · DVC · Feast</span>
+      <span class="stack-chip">Evidently · Prometheus · Grafana</span>
+      <span class="stack-chip">Docker · MinIO</span>
+      <span class="stack-chip">slowapi</span>
+      <span class="stack-chip">Python 3.12</span>
+    </div>
+    <p style="margin-top:16px; font-size:13px; color:var(--muted); text-align:center; max-width:680px; line-height:1.6">
+      Plataforma construída para resolver os <strong style="color:var(--text)">9 gaps críticos</strong> identificados em uma grande instituição financeira. O modelo LSTM e o agente LLM são os <strong style="color:var(--text)">veículos de demonstração</strong> end-to-end da arquitetura MLOps.
+    </p>
+  </div>
+
+  <!-- ══════════════════════════════════════════════════════
+       SLIDE 2 · ARQUITETURA GERAL
+  ══════════════════════════════════════════════════════════ -->
+  <div class="slide" id="s2">
+    <div class="tag purple">&#127959;&#65039; Arquitetura</div>
+    <h2 style="font-size:clamp(24px,3vw,38px); text-align:center">Visão geral da plataforma MLOps</h2>
+    <p style="font-size:12px; color:var(--muted); text-align:center; margin-top:-10px; margin-bottom:6px">Cada camada resolve um ou mais gaps identificados na instituição financeira anônima.</p>
+    <div class="two-col">
+      <div class="layer-stack">
+        <div class="layer"><div class="l-dot" style="background:#4a9eff"></div><span class="l-name">Data Layer</span><span class="l-detail">yfinance → MinIO → Feast</span></div>
+        <div class="layer"><div class="l-dot" style="background:var(--accent1)"></div><span class="l-name">Feature Store</span><span class="l-detail">Feast + Parquet offline</span></div>
+        <div class="layer"><div class="l-dot" style="background:var(--accent1)"></div><span class="l-name">Training</span><span class="l-detail">LSTM · MLflow · DVC</span></div>
+        <div class="layer"><div class="l-dot" style="background:var(--accent2)"></div><span class="l-name">Serving API</span><span class="l-detail">FastAPI · slowapi · Pydantic</span></div>
+        <div class="layer"><div class="l-dot" style="background:var(--accent2)"></div><span class="l-name">LLM Agent</span><span class="l-detail">ReAct · LiteLLM · ChromaDB</span></div>
+        <div class="layer"><div class="l-dot" style="background:var(--accent4)"></div><span class="l-name">Monitoring</span><span class="l-detail">Evidently · Prometheus · Grafana</span></div>
+        <div class="layer"><div class="l-dot" style="background:var(--accent3)"></div><span class="l-name">Security</span><span class="l-detail">PII detect · Guardrails · OWASP</span></div>
+      </div>
+      <div>
+        <div class="card" style="height:100%">
+          <div class="arch" style="flex-direction:column; border:none; border-radius:0; padding:0; gap:8px; margin:0">
+            <div class="arch-col" style="border:none; padding:0; border-radius:0; background:transparent; flex-direction:row; flex-wrap:wrap; gap:8px">
+              <div class="arch-item" style="flex:1"><div class="dot-col" style="background:#4a9eff"></div>yfinance</div>
+              <div class="arch-item" style="flex:1"><div class="dot-col" style="background:#4a9eff"></div>MinIO</div>
+              <div class="arch-item" style="flex:1"><div class="dot-col" style="background:#4a9eff"></div>Feast</div>
+            </div>
+            <div style="text-align:center; color:var(--muted); font-size:20px">↓</div>
+            <div class="arch-col" style="border:none; padding:0; border-radius:0; background:transparent; flex-direction:row; flex-wrap:wrap; gap:8px">
+              <div class="arch-item" style="flex:1"><div class="dot-col" style="background:var(--accent1)"></div>LSTM Training</div>
+              <div class="arch-item" style="flex:1"><div class="dot-col" style="background:var(--accent1)"></div>MLflow Registry</div>
+            </div>
+            <div style="text-align:center; color:var(--muted); font-size:20px">↓</div>
+            <div class="arch-item"><div class="dot-col" style="background:var(--accent2)"></div>FastAPI · /predict · /agent · /drift · /metrics</div>
+            <div style="text-align:center; color:var(--muted); font-size:20px">↓</div>
+            <div class="arch-col" style="border:none; padding:0; border-radius:0; background:transparent; flex-direction:row; flex-wrap:wrap; gap:8px">
+              <div class="arch-item" style="flex:1"><div class="dot-col" style="background:var(--accent4)"></div>Prometheus</div>
+              <div class="arch-item" style="flex:1"><div class="dot-col" style="background:var(--accent4)"></div>Grafana</div>
+              <div class="arch-item" style="flex:1"><div class="dot-col" style="background:var(--accent4)"></div>Evidently</div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ══════════════════════════════════════════════════════
+       SLIDE 3 · DATA PIPELINE
+  ══════════════════════════════════════════════════════════ -->
+  <div class="slide" id="s3">
+    <div class="tag blue">📡 Data Pipeline</div>
+    <h2 style="font-size:clamp(24px,3vw,38px); text-align:center">Do dado bruto ao feature vector</h2>
+    <div class="pipeline">
+      <div class="pipe-step">
+        <div class="step-num">1</div>
+        <div class="step-icon">📡</div>
+        <h3>Ingestão</h3>
+        <p>yfinance<br/>OHLCV diário<br/>B3 tickers</p>
+      </div>
+      <div class="pipe-arrow">→</div>
+      <div class="pipe-step">
+        <div class="step-num">2</div>
+        <div class="step-icon">⚙️</div>
+        <h3>Feature Eng.</h3>
+        <p>RSI · MACD<br/>Bollinger · ATR<br/>Volume ratio</p>
+      </div>
+      <div class="pipe-arrow">→</div>
+      <div class="pipe-step">
+        <div class="step-num">3</div>
+        <div class="step-icon">🍽️</div>
+        <h3>Feast</h3>
+        <p>Feature store<br/>offline (Parquet)<br/>MinIO S3</p>
+      </div>
+      <div class="pipe-arrow">→</div>
+      <div class="pipe-step">
+        <div class="step-num">4</div>
+        <div class="step-icon">📐</div>
+        <h3>Validação</h3>
+        <p>Pandera schema<br/>drift check<br/>Evidently</p>
+      </div>
+      <div class="pipe-arrow">→</div>
+      <div class="pipe-step">
+        <div class="step-num">5</div>
+        <div class="step-icon">🔁</div>
+        <h3>DVC</h3>
+        <p>Versionamento<br/>de dados e<br/>pipelines</p>
+      </div>
+      <div class="pipe-arrow">→</div>
+      <div class="pipe-step">
+        <div class="step-num">6</div>
+        <div class="step-icon">🧠</div>
+        <h3>LSTM Input</h3>
+        <p>Janela 60 dias<br/>MinMaxScaler<br/>(T, F_n)</p>
+      </div>
+    </div>
+    <div class="code-block" style="max-width:820px; margin-top:20px; font-size:12px">
+      <span class="cm"># Exemplo: features calculadas por ticker</span><br/>
+      features = [<span class="st">"close"</span>, <span class="st">"rsi_14"</span>, <span class="st">"macd"</span>, <span class="st">"macd_signal"</span>,<br/>
+      &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="st">"bb_upper"</span>, <span class="st">"bb_lower"</span>, <span class="st">"atr"</span>, <span class="st">"volume_ratio"</span>]<br/>
+      <span class="cm"># Janela temporal: 60 dias → shape (batch, 60, 8)</span>
+    </div>
+  </div>
+
+  <!-- ══════════════════════════════════════════════════════
+       SLIDE 4 · LSTM MODEL
+  ══════════════════════════════════════════════════════════ -->
+  <div class="slide" id="s4">
+    <div class="tag purple">&#129504; Modelo de Referência &mdash; LSTM</div>
+    <h2 style="font-size:clamp(22px,3vw,36px); text-align:center">Modelo de exemplo usado para validar a plataforma end-to-end</h2>
+    <div class="lstm-layout">
+      <div class="lstm-diagram">
+        <div class="lstm-block input"><span>Input Layer</span><span class="dim">(batch, 60, 8)</span></div>
+        <div class="lstm-arrow">↓</div>
+        <div class="lstm-block lstm1"><span>LSTM Layer 1</span><span class="dim">units=128, return_seq=True</span></div>
+        <div class="lstm-arrow">↓</div>
+        <div class="lstm-block drop"><span>Dropout</span><span class="dim">rate=0.2</span></div>
+        <div class="lstm-arrow">↓</div>
+        <div class="lstm-block lstm2"><span>LSTM Layer 2</span><span class="dim">units=64</span></div>
+        <div class="lstm-arrow">↓</div>
+        <div class="lstm-block dense"><span>Dense</span><span class="dim">units=32, ReLU</span></div>
+        <div class="lstm-arrow">↓</div>
+        <div class="lstm-block output"><span>Output · Sigmoid</span><span class="dim">P(alta) ∈ [0,1]</span></div>
+      </div>
+      <div style="display:flex; flex-direction:column; gap:14px">
+        <div class="card">
+          <h3 style="font-size:14px; margin-bottom:10px">📊 Métricas de Treino</h3>
+          <div class="metric-row" style="flex-direction:column; align-items:flex-start; padding:0; background:transparent; border:none; gap:8px; margin:0">
+            <div class="metric-row" style="padding:10px 14px; margin:0; width:100%">
+              <span class="m-label" style="font-size:12px">Acurácia</span>
+              <div class="m-bar-wrap"><div class="m-bar" style="width:58%"></div></div>
+              <span class="m-val" style="color:var(--accent2)">~58%</span>
+            </div>
+            <div class="metric-row" style="padding:10px 14px; margin:0; width:100%">
+              <span class="m-label" style="font-size:12px">AUC-ROC</span>
+              <div class="m-bar-wrap"><div class="m-bar" style="width:63%"></div></div>
+              <span class="m-val" style="color:var(--accent2)">~0.63</span>
+            </div>
+            <div class="metric-row" style="padding:10px 14px; margin:0; width:100%">
+              <span class="m-label" style="font-size:12px">Loss (BCE)</span>
+              <div class="m-bar-wrap"><div class="m-bar" style="width:35%; background:linear-gradient(90deg,var(--accent3),var(--accent4))"></div></div>
+              <span class="m-val" style="color:var(--accent4)">0.69</span>
+            </div>
+          </div>
+        </div>
+        <div class="card">
+          <h3 style="font-size:14px; margin-bottom:8px">⚙️ Configuração</h3>
+          <div class="code-block" style="font-size:11px">
+            epochs   = <span class="nu">50</span><br/>
+            batch    = <span class="nu">32</span><br/>
+            patience = <span class="nu">10</span> <span class="cm"># early stop</span><br/>
+            optimizer= <span class="st">"adam"</span><br/>
+            loss     = <span class="st">"binary_crossentropy"</span>
+          </div>
+        </div>
+        <div class="card">
+          <h3 style="font-size:14px; margin-bottom:8px">🗂️ Versionamento</h3>
+          <p style="font-size:12px; color:var(--muted); line-height:1.5">MLflow Registry com estágios <strong style="color:var(--text)">Staging → Production</strong>. Fallback automático para local <code style="font-size:11px">lstm_model_latest.keras</code>.</p>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ══════════════════════════════════════════════════════
+       SLIDE 5 · RAG + AGENTE
+  ══════════════════════════════════════════════════════════ -->
+  <div class="slide" id="s5">
+    <div class="tag teal">🤖 Agente LLM + RAG</div>
+    <h2 style="font-size:clamp(24px,3vw,38px); text-align:center">Padrão ReAct com recuperação vetorial</h2>
+    <div class="rag-flow">
+      <div class="rag-col">
+        <div class="rag-item">
+          <div class="ri-title">🗣️ Query do usuário</div>
+          <div class="ri-sub">"PETR4 vai subir amanhã?"</div>
+        </div>
+        <div class="rag-item">
+          <div class="ri-title">🔐 Guardrails / PII</div>
+          <div class="ri-sub">Filtragem de entrada e anonimização</div>
+        </div>
+        <div class="rag-item">
+          <div class="ri-title">🔍 Retrieval (ChromaDB)</div>
+          <div class="ri-sub">Top-K chunks de contexto financeiro via embedding semântico</div>
+        </div>
+        <div class="rag-item">
+          <div class="ri-title">🛠️ Tools disponíveis</div>
+          <div class="ri-sub">predict_price · get_indicators · search_context · get_model_info</div>
+        </div>
+      </div>
+      <div class="rag-center">
+        <div style="font-size:20px; color:var(--muted); writing-mode:horizontal-tb">→</div>
+        <div class="rag-center-box">
+          <div class="rb-icon">🧠</div>
+          <h3>ReAct Agent</h3>
+          <p>Reason → Act → Observe</p>
+        </div>
+        <div style="font-size:20px; color:var(--muted)">→</div>
+      </div>
+      <div class="rag-col">
+        <div class="rag-item">
+          <div class="ri-title">📊 Predição LSTM</div>
+          <div class="ri-sub">P(alta)=0.63 — sinal BULLISH</div>
+        </div>
+        <div class="rag-item">
+          <div class="ri-title">📈 Indicadores Técnicos</div>
+          <div class="ri-sub">RSI=58, MACD=+0.12, BB position=mid</div>
+        </div>
+        <div class="rag-item">
+          <div class="ri-title">✍️ Resposta Final</div>
+          <div class="ri-sub">Análise fundamentada em linguagem natural com sinal, contexto e aviso de risco</div>
+        </div>
+        <div class="rag-item">
+          <div class="ri-title">🔐 Guardrails saída</div>
+          <div class="ri-sub">Validação de conteúdo e limite de tokens</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ══════════════════════════════════════════════════════
+       SLIDE 6 · MLOps: MLflow + DVC
+  ══════════════════════════════════════════════════════════ -->
+  <div class="slide" id="s6">
+    <div class="tag gold">🔁 MLOps · MLflow + DVC</div>
+    <h2 style="font-size:clamp(24px,3vw,38px); text-align:center">Reprodutibilidade e rastreabilidade completas</h2>
+    <div class="mlops-grid">
+      <div class="card">
+        <div style="font-size:28px; margin-bottom:12px">📦</div>
+        <h3 style="font-size:15px; margin-bottom:8px">MLflow Experiment Tracking</h3>
+        <ul style="list-style:none; display:flex; flex-direction:column; gap:6px">
+          <li style="font-size:13px; color:var(--muted); display:flex; gap:8px; align-items:flex-start"><span style="color:var(--accent2)">▸</span> Logs de hiperparâmetros, métricas e artefatos por run</li>
+          <li style="font-size:13px; color:var(--muted); display:flex; gap:8px; align-items:flex-start"><span style="color:var(--accent2)">▸</span> Model Registry com estágios Staging/Production</li>
+          <li style="font-size:13px; color:var(--muted); display:flex; gap:8px; align-items:flex-start"><span style="color:var(--accent2)">▸</span> Rollback automático para versão anterior estável</li>
+          <li style="font-size:13px; color:var(--muted); display:flex; gap:8px; align-items:flex-start"><span style="color:var(--accent2)">▸</span> Artefatos no MinIO (S3-compatible)</li>
+        </ul>
+      </div>
+      <div class="card">
+        <div style="font-size:28px; margin-bottom:12px">📂</div>
+        <h3 style="font-size:15px; margin-bottom:8px">DVC Pipeline</h3>
+        <div class="code-block" style="font-size:12px">
+          <span class="cm"># dvc.yaml</span><br/>
+          stages:<br/>
+          &nbsp; ingest:   <span class="fn">ingestion.py</span><br/>
+          &nbsp; features: <span class="fn">feature_engineering.py</span><br/>
+          &nbsp; train:    <span class="fn">train.py</span><br/>
+          &nbsp; evaluate: <span class="fn">baseline.py</span><br/>
+          <br/>
+          <span class="cm"># Dados versionados no MinIO</span><br/>
+          <span class="cm"># dvc repro → pipeline completa</span>
+        </div>
+      </div>
+      <div class="card">
+        <div style="font-size:28px; margin-bottom:12px">🗃️</div>
+        <h3 style="font-size:15px; margin-bottom:8px">MinIO · Object Storage</h3>
+        <ul style="list-style:none; display:flex; flex-direction:column; gap:6px">
+          <li style="font-size:13px; color:var(--muted); display:flex; gap:8px; align-items:flex-start"><span style="color:var(--accent1)">▸</span> S3-compatible, self-hosted</li>
+          <li style="font-size:13px; color:var(--muted); display:flex; gap:8px; align-items:flex-start"><span style="color:var(--accent1)">▸</span> Buckets: <code style="font-size:11px">mlflow-artifacts</code>, <code style="font-size:11px">feast-offline-store</code></li>
+          <li style="font-size:13px; color:var(--muted); display:flex; gap:8px; align-items:flex-start"><span style="color:var(--accent1)">▸</span> Substitui S3/GCS para ambiente local</li>
+        </ul>
+      </div>
+      <div class="card">
+        <div style="font-size:28px; margin-bottom:12px">🍽️</div>
+        <h3 style="font-size:15px; margin-bottom:8px">Feast · Feature Store</h3>
+        <ul style="list-style:none; display:flex; flex-direction:column; gap:6px">
+          <li style="font-size:13px; color:var(--muted); display:flex; gap:8px; align-items:flex-start"><span style="color:var(--accent4)">▸</span> FeatureView <code style="font-size:11px">stock_features</code> — indicadores técnicos</li>
+          <li style="font-size:13px; color:var(--muted); display:flex; gap:8px; align-items:flex-start"><span style="color:var(--accent4)">▸</span> Offline store: Parquet no MinIO</li>
+          <li style="font-size:13px; color:var(--muted); display:flex; gap:8px; align-items:flex-start"><span style="color:var(--accent4)">▸</span> Point-in-time correct joins para treino</li>
+        </ul>
+      </div>
+    </div>
+  </div>
+
+  <!-- ══════════════════════════════════════════════════════
+       SLIDE 7 · MONITORAMENTO
+  ══════════════════════════════════════════════════════════ -->
+  <div class="slide" id="s7">
+    <div class="tag gold">📡 Observabilidade</div>
+    <h2 style="font-size:clamp(24px,3vw,38px); text-align:center">Monitoramento em 3 camadas</h2>
+    <div class="mon-grid">
+      <div class="mon-card" style="border-color:rgba(0,229,176,.25)">
+        <div class="mon-icon">📊</div>
+        <h3>Evidently · Drift</h3>
+        <ul>
+          <li>PSI por feature</li>
+          <li>Thresholds no YAML<br/><code style="font-size:10px">green=0.20 · yellow=0.50</code></li>
+          <li>Relatório HTML gerado em <code style="font-size:10px">/drift</code></li>
+          <li>Alerta automático via endpoint</li>
+        </ul>
+      </div>
+      <div class="mon-card" style="border-color:rgba(124,108,252,.25)">
+        <div class="mon-icon">📡</div>
+        <h3>Prometheus · Métricas</h3>
+        <ul>
+          <li><code style="font-size:10px">http_requests_total</code></li>
+          <li><code style="font-size:10px">http_request_duration_seconds</code></li>
+          <li><code style="font-size:10px">api_predictions_total</code></li>
+          <li><code style="font-size:10px">feature_drift_score</code></li>
+          <li>Scraped via <code style="font-size:10px">/metrics</code></li>
+        </ul>
+      </div>
+      <div class="mon-card" style="border-color:rgba(255,179,71,.25)">
+        <div class="mon-icon">📈</div>
+        <h3>Grafana · Dashboards</h3>
+        <ul>
+          <li>API Overview dashboard</li>
+          <li>Req/min por endpoint</li>
+          <li>Latência P50/P95/P99</li>
+          <li>Taxa de erro 4xx/5xx</li>
+          <li>Drift score ao longo do tempo</li>
+        </ul>
+      </div>
+    </div>
+    <div class="code-block" style="max-width:820px; margin-top:18px; font-size:12px">
+      <span class="cm"># configs/monitoring_config.yaml — thresholds externalizados</span><br/>
+      drift: green_threshold: <span class="nu">0.20</span> · yellow_threshold: <span class="nu">0.50</span> · stattest_threshold: <span class="nu">0.05</span><br/>
+      rate_limiting: predict_per_minute: <span class="nu">30</span> · agent_per_minute: <span class="nu">10</span> · default_per_minute: <span class="nu">60</span><br/>
+      alerts: drift_psi_warn: <span class="nu">0.20</span> · latency_p95_ms: <span class="nu">2000</span> · model_accuracy_min: <span class="nu">0.50</span>
+    </div>
+  </div>
+
+  <!-- ══════════════════════════════════════════════════════
+       SLIDE 8 · AVALIAÇÃO LLM-as-Judge
+  ══════════════════════════════════════════════════════════ -->
+  <div class="slide" id="s8">
+    <div class="tag teal">⚖️ Avaliação · LLM-as-Judge</div>
+    <h2 style="font-size:clamp(24px,3vw,38px); text-align:center">Qualidade do agente medida automaticamente</h2>
+    <div class="eval-layout">
+      <div style="display:flex; flex-direction:column; gap:14px">
+        <div class="card">
+          <h3 style="font-size:14px; margin-bottom:10px">🎯 Golden Set</h3>
+          <ul style="list-style:none; display:flex; flex-direction:column; gap:6px">
+            <li style="font-size:13px; color:var(--muted); display:flex; gap:8px"><span style="color:var(--accent2)">▸</span> 25 entradas JSONL curadas</li>
+            <li style="font-size:13px; color:var(--muted); display:flex; gap:8px"><span style="color:var(--accent2)">▸</span> Tickers: PETR4, VALE3, AZUL4, HAPV3...</li>
+            <li style="font-size:13px; color:var(--muted); display:flex; gap:8px"><span style="color:var(--accent2)">▸</span> Cenários: RSI, MACD, Bollinger, ATR</li>
+            <li style="font-size:13px; color:var(--muted); display:flex; gap:8px"><span style="color:var(--accent2)">▸</span> Expected answer + contexts por entrada</li>
+          </ul>
+        </div>
+        <div class="card">
+          <h3 style="font-size:14px; margin-bottom:10px">📐 4 Critérios de Avaliação</h3>
+          <div class="metric-row" style="padding:8px 14px; margin-bottom:6px; width:100%">
+            <span class="m-label" style="font-size:12px">Relevância</span>
+            <div class="m-bar-wrap"><div class="m-bar" style="width:80%"></div></div>
+            <span class="m-val" style="font-size:12px">0–5</span>
+          </div>
+          <div class="metric-row" style="padding:8px 14px; margin-bottom:6px; width:100%">
+            <span class="m-label" style="font-size:12px">Fidelidade Técnica</span>
+            <div class="m-bar-wrap"><div class="m-bar" style="width:75%"></div></div>
+            <span class="m-val" style="font-size:12px">0–5</span>
+          </div>
+          <div class="metric-row" style="padding:8px 14px; margin-bottom:6px; width:100%">
+            <span class="m-label" style="font-size:12px">Adequação Investimento</span>
+            <div class="m-bar-wrap"><div class="m-bar" style="width:70%"></div></div>
+            <span class="m-val" style="font-size:12px">0–5</span>
+          </div>
+          <div class="metric-row" style="padding:8px 14px; margin-bottom:6px; width:100%">
+            <span class="m-label" style="font-size:12px">Clareza</span>
+            <div class="m-bar-wrap"><div class="m-bar" style="width:85%"></div></div>
+            <span class="m-val" style="font-size:12px">0–5</span>
+          </div>
+          <p style="font-size:12px; color:var(--muted); margin-top:6px">PASS_THRESHOLD = 3.0 (média dos critérios)</p>
+        </div>
+      </div>
+      <div style="display:flex; flex-direction:column; gap:14px">
+        <div class="card">
+          <h3 style="font-size:14px; margin-bottom:10px">🔬 A/B Benchmark de Prompts</h3>
+          <div style="display:flex; flex-direction:column; gap:8px">
+            <div class="rag-item" style="border-left: 3px solid var(--accent1)">
+              <div class="ri-title">Variant A · Assessor Conservador</div>
+              <div class="ri-sub">temp=0.2 · disclaimers de risco explícitos</div>
+            </div>
+            <div class="rag-item" style="border-left: 3px solid var(--accent2)">
+              <div class="ri-title">Variant B · Analista Técnico</div>
+              <div class="ri-sub">temp=0.1 · numérico, direto e breve</div>
+            </div>
+            <div class="rag-item" style="border-left: 3px solid var(--accent4)">
+              <div class="ri-title">Variant C · Educador Financeiro</div>
+              <div class="ri-sub">temp=0.3 · explica indicadores antes do sinal</div>
+            </div>
+          </div>
+          <p style="font-size:12px; color:var(--muted); margin-top:10px">
+            Cada variante avaliada no golden set via LLMJudge.<br/>
+            Resultado: ranking por score médio + breakdown por critério.
+          </p>
+        </div>
+        <div class="card">
+          <h3 style="font-size:14px; margin-bottom:8px">💻 CLI</h3>
+          <div class="code-block" style="font-size:11px">
+            python -m src.evaluation.ab_test_prompts \<br/>
+            &nbsp; --n-entries <span class="nu">10</span> \<br/>
+            &nbsp; --variants A B C \<br/>
+            &nbsp; --output reports/ab_results.json
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ══════════════════════════════════════════════════════
+       SLIDE 9 · SEGURANÇA
+  ══════════════════════════════════════════════════════════ -->
+  <div class="slide" id="s9">
+    <div class="tag red">🛡️ Segurança</div>
+    <h2 style="font-size:clamp(24px,3vw,38px); text-align:center">OWASP Top 10 mapeado + defesas ativas</h2>
+    <div class="owasp-list">
+      <div class="owasp-item"><div class="o-num">A01</div><div><h3>Broken Access Control</h3><p>Rate limiting por IP via slowapi · 30/min predict · 10/min agent</p></div></div>
+      <div class="owasp-item"><div class="o-num">A02</div><div><h3>Cryptographic Failures</h3><p>Dados em trânsito via HTTPS · segredos via variáveis de ambiente</p></div></div>
+      <div class="owasp-item"><div class="o-num">A03</div><div><h3>Injection</h3><p>Guardrails de prompt injection · validação Pydantic em todos os inputs</p></div></div>
+      <div class="owasp-item"><div class="o-num">A05</div><div><h3>Security Misconfiguration</h3><p>CORS restrito · headers de segurança · sem debug em produção</p></div></div>
+      <div class="owasp-item"><div class="o-num">A06</div><div><h3>Vulnerable Components</h3><p>Deps pinadas com faixas seguras · pyproject.toml auditável</p></div></div>
+      <div class="owasp-item"><div class="o-num">A07</div><div><h3>Auth Failures</h3><p>Detecção de PII antes do LLM · anonimização automática de dados pessoais</p></div></div>
+      <div class="owasp-item"><div class="o-num">A09</div><div><h3>Security Logging</h3><p>Logging estruturado de todos os requests · métricas de erro no Prometheus</p></div></div>
+      <div class="owasp-item"><div class="o-num">A10</div><div><h3>SSRF</h3><p>Sem fetch de URLs externas em runtime · yfinance apenas no pipeline offline</p></div></div>
+    </div>
+  </div>
+
+  <!-- ══════════════════════════════════════════════════════
+       SLIDE 10 · API
+  ══════════════════════════════════════════════════════════ -->
+  <div class="slide" id="s10">
+    <div class="tag blue">⚡ API Reference</div>
+    <h2 style="font-size:clamp(24px,3vw,38px); text-align:center">Endpoints FastAPI — contrato público</h2>
+    <div class="api-table">
+      <div class="api-row">
+        <span class="method get">GET</span>
+        <span class="api-path">/health</span>
+        <span class="api-desc">Health check com status do modelo e storage</span>
+        <span class="api-rate">60/min</span>
+      </div>
+      <div class="api-row">
+        <span class="method get">GET</span>
+        <span class="api-path">/features</span>
+        <span class="api-desc">Lista features disponíveis e nome do modelo carregado</span>
+        <span class="api-rate">60/min</span>
+      </div>
+      <div class="api-row" style="border-color:rgba(124,108,252,.4)">
+        <span class="method post">POST</span>
+        <span class="api-path">/predict</span>
+        <span class="api-desc">Predição LSTM — retorna probabilidade P(alta) e sinal direcional</span>
+        <span class="api-rate" style="color:var(--accent3); border-color:rgba(255,107,107,.3); background:rgba(255,107,107,.08)">30/min</span>
+      </div>
+      <div class="api-row" style="border-color:rgba(0,229,176,.3)">
+        <span class="method post">POST</span>
+        <span class="api-path">/agent</span>
+        <span class="api-desc">Agente LLM com RAG — análise em linguagem natural de qualquer ticker B3</span>
+        <span class="api-rate" style="color:var(--accent3); border-color:rgba(255,107,107,.3); background:rgba(255,107,107,.08)">10/min</span>
+      </div>
+      <div class="api-row">
+        <span class="method get">GET</span>
+        <span class="api-path">/metrics</span>
+        <span class="api-desc">Endpoint Prometheus — counters, histogramas e gauges</span>
+        <span class="api-rate">60/min</span>
+      </div>
+      <div class="api-row">
+        <span class="method get">GET</span>
+        <span class="api-path">/drift</span>
+        <span class="api-desc">Executa pipeline Evidently e retorna relatório de drift por feature</span>
+        <span class="api-rate">60/min</span>
+      </div>
+    </div>
+    <p style="margin-top:16px; font-size:12px; color:var(--muted)">
+      Docs interativos em <code>/docs</code> (Swagger UI) e <code>/redoc</code> após subir a stack com Docker Compose.
+    </p>
+  </div>
+
+  <!-- ══════════════════════════════════════════════════════
+       SLIDE 11 · TESTES
+  ══════════════════════════════════════════════════════════ -->
+  <div class="slide" id="s11">
+    <div class="tag purple">🧪 Testes</div>
+    <h2 style="font-size:clamp(24px,3vw,38px); text-align:center">Cobertura end-to-end com pytest</h2>
+    <div class="test-layout">
+      <div>
+        <div class="test-item"><span class="test-pass">PASS</span> test_api.py — endpoints FastAPI, schemas, rate limit</div>
+        <div class="test-item"><span class="test-pass">PASS</span> test_models.py — LSTM forward pass, artefatos</div>
+        <div class="test-item"><span class="test-pass">PASS</span> test_features.py — feature engineering, Pandera</div>
+        <div class="test-item"><span class="test-pass">PASS</span> test_monitoring.py — drift detection, alertas</div>
+        <div class="test-item"><span class="test-pass">PASS</span> test_security.py — PII, guardrails, injection</div>
+        <div class="test-item" style="border-color:var(--border); color:var(--muted)">
+          <span style="font-family:'JetBrains Mono',monospace; font-size:13px; color:var(--muted)">TODO</span>
+          test_ab_test_prompts.py
+        </div>
+      </div>
+      <div style="display:flex; flex-direction:column; gap:14px">
+        <div class="card">
+          <h3 style="font-size:14px; margin-bottom:8px">⚙️ Configuração</h3>
+          <div class="code-block" style="font-size:12px">
+            <span class="cm"># pyproject.toml</span><br/>
+            [tool.pytest.ini_options]<br/>
+            asyncio_mode = <span class="st">"auto"</span><br/>
+            filterwarnings = [<span class="st">"ignore::DeprecationWarning"</span>]<br/>
+            <br/>
+            <span class="cm"># Cobertura mínima: 80%</span><br/>
+            --cov=src --cov-fail-under=<span class="nu">80</span>
+          </div>
+        </div>
+        <div class="card">
+          <h3 style="font-size:14px; margin-bottom:8px">🏃 Execução</h3>
+          <div class="code-block" style="font-size:12px">
+            <span class="cm"># Rodar todos os testes</span><br/>
+            make test<br/>
+            <br/>
+            <span class="cm"># Com cobertura</span><br/>
+            make test-cov<br/>
+            <br/>
+            <span class="cm"># Lint + format</span><br/>
+            make lint
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ══════════════════════════════════════════════════════
+       SLIDE 12 · RECAP FINAL
+  ══════════════════════════════════════════════════════════ -->
+  <div class="slide" id="s12">
+    <div class="tag teal">✅ Resumo</div>
+    <h1>Uma plataforma MLOps<br/><span class="grad">completa, segura e reproduzível.</span></h1>
+    <div class="final-grid">
+      <div class="final-card">
+        <div class="fc-icon">&#129504;</div>
+        <span class="fc-num">LSTM</span>
+        <h3>Modelo de Referência</h3>
+        <p>~58% acurácia direcional · MLflow + DVC · rollback automático · Nível 2</p>
+      </div>
+      <div class="final-card">
+        <div class="fc-icon">🤖</div>
+        <span class="fc-num">ReAct</span>
+        <h3>Agente LLM + RAG</h3>
+        <p>ChromaDB · LiteLLM · 4 ferramentas · guardrails de entrada/saída</p>
+      </div>
+      <div class="final-card">
+        <div class="fc-icon">📊</div>
+        <span class="fc-num">3x</span>
+        <h3>Observabilidade</h3>
+        <p>Evidently drift · Prometheus metrics · Grafana dashboards</p>
+      </div>
+      <div class="final-card">
+        <div class="fc-icon">⚖️</div>
+        <span class="fc-num">25</span>
+        <h3>Golden Set + Judge</h3>
+        <p>LLM-as-Judge em 4 critérios · A/B de 3 variantes de prompt</p>
+      </div>
+      <div class="final-card">
+        <div class="fc-icon">🛡️</div>
+        <span class="fc-num">OWASP</span>
+        <h3>Segurança</h3>
+        <p>Top 10 mapeado · PII · guardrails · rate limiting · LGPD</p>
+      </div>
+      <div class="final-card">
+        <div class="fc-icon">☁️</div>
+        <span class="fc-num">100%</span>
+        <h3>Open-Source</h3>
+        <p>Cloud-agnostic · Docker Compose · sem vendor lock-in</p>
+      </div>
+    </div>
+    <p style="margin-top:24px; font-family:'JetBrains Mono',monospace; font-size:12px; color:var(--muted)">
+      docker compose up --build &nbsp;&middot;&nbsp; localhost:8000 &nbsp;&middot;&nbsp; FIAP Tech Challenge &middot; Fase 5 &middot; 2026 &nbsp;&middot;&nbsp; Pós-Tech Machine Learning Engineer
+    </p>
+  </div>
+
+</div><!-- /.deck -->
+
+<div class="nav" id="nav">
+  <button id="prev">&#8592;</button>
+  <div class="dots" id="dots"></div>
+  <div class="slide-count" id="count"></div>
+  <button id="next">&#8594;</button>
+</div>
+
+<script>
+(function () {
+  const slides = Array.from(document.querySelectorAll('.slide'));
+  const dotsEl  = document.getElementById('dots');
+  const countEl = document.getElementById('count');
+  const progEl  = document.getElementById('progress');
+  let current = 0, animating = false;
+
+  slides.forEach((_, i) => {
+    const d = document.createElement('span');
+    d.className = 'dot' + (i === 0 ? ' active' : '');
+    d.addEventListener('click', () => goTo(i));
+    dotsEl.appendChild(d);
+  });
+
+  function sync() {
+    document.querySelectorAll('.dot').forEach((d, i) => d.classList.toggle('active', i === current));
+    countEl.textContent = (current + 1) + ' / ' + slides.length;
+    progEl.style.width  = ((current + 1) / slides.length * 100) + '%';
+  }
+
+  function goTo(idx) {
+    if (animating || idx === current || idx < 0 || idx >= slides.length) return;
+    animating = true;
+    const prev = current;
+    current = idx;
+
+    slides[prev].classList.add('exit');
+    slides[current].classList.add('active');
+    sync();
+
+    setTimeout(() => {
+      slides[prev].classList.remove('exit', 'active');
+      animating = false;
+    }, 460);
+  }
+
+  // Init
+  slides[0].classList.add('active');
+  sync();
+
+  document.getElementById('prev').addEventListener('click', () => goTo(current - 1));
+  document.getElementById('next').addEventListener('click', () => goTo(current + 1));
+
+  document.addEventListener('keydown', e => {
+    if (e.key === 'ArrowRight' || e.key === ' ') goTo(current + 1);
+    if (e.key === 'ArrowLeft')                    goTo(current - 1);
+    if (e.key.toLowerCase() === 'f') {
+      if (!document.fullscreenElement) document.documentElement.requestFullscreen();
+      else document.exitFullscreen();
+    }
+  });
+
+  let tx = 0;
+  document.addEventListener('touchstart', e => { tx = e.touches[0].clientX; });
+  document.addEventListener('touchend',   e => {
+    const dx = e.changedTouches[0].clientX - tx;
+    if (Math.abs(dx) > 50) dx < 0 ? goTo(current + 1) : goTo(current - 1);
+  });
+})();
+</script>
+</body>
+</html>

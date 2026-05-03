@@ -1,7 +1,8 @@
 .PHONY: help install dev-install setup-infra teardown-infra \
         data-download data-features feast-apply feast-materialize \
         train serve serve-alt stop-serve serve-docker test test-cov lint format \
-        dvc-init dvc-push dvc-pull clean deploy-aws seed-rag
+        dvc-init dvc-push dvc-pull clean deploy-aws seed-rag \
+        present present-business present-technical
 
 .DEFAULT_GOAL := help
 
@@ -190,12 +191,22 @@ docker-build-push:  ## Build e push da imagem Docker para ECR
 # ─── Monitoring Reports ───────────────────────────────────────────────────────
 drift-report:  ## Gera e abre o relatório de drift (Evidently HTML)
 	@echo "📊 Gerando relatório de drift..."
-	$(PYTHON) -m src.monitoring.drift
+	-$(PYTHON) -m src.monitoring.drift
 	@echo "🌐 Abrindo relatório..."
 	$(OPEN_CMD) reports/drift_report.html
 
 coverage-report:  ## Abre relatório de cobertura de testes HTML
 	$(OPEN_CMD) htmlcov/index.html
+
+present-business:  ## Abre a apresentação de negócio no browser
+	$(OPEN_CMD) docs/present/presentation_business.html
+
+present-technical:  ## Abre a apresentação técnica no browser
+	$(OPEN_CMD) docs/present/presentation_technical.html
+
+present:  ## Abre as duas apresentações (negócio + técnica) no browser
+	$(OPEN_CMD) docs/present/presentation_business.html
+	$(OPEN_CMD) docs/present/presentation_technical.html
 
 # ─── Cleanup ──────────────────────────────────────────────────────────────────
 clean:  ## Remove arquivos temporários e caches
