@@ -96,6 +96,7 @@ Thumbs.db
 *.bak
 *.backup
 *~
+.keras
 
 # Credentials and Secrets
 credentials.json

@@ -1,6 +1,7 @@
 """Tests for model training and prediction."""
 
 import numpy as np
+import pytest
 from sklearn.preprocessing import StandardScaler
 
 from src.models.train import build_lstm_model, evaluate_model, prepare_lstm_sequences, train_model
@@ -95,3 +96,70 @@ def test_train_model_one_epoch():
     assert trained_model is not None
     assert "loss" in history
     assert len(history["loss"]) == 1
+
+
+# ---------------------------------------------------------------------------
+# MLP PyTorch baseline tests (skipped when torch is not installed)
+# ---------------------------------------------------------------------------
+
+torch = pytest.importorskip("torch", reason="PyTorch not installed — skipping MLP tests")
+
+
+def test_mlp_classifier_forward_pass():
+    """MLPClassifier.predict_proba returns values in [0, 1]."""
+    from src.models.mlp_torch import MLPClassifier
+
+    x = np.random.randn(20, 8).astype(np.float32)
+    clf = MLPClassifier(input_dim=8, hidden_dims=[16, 8], dropout=0.0)
+    proba = clf.predict_proba(x)
+
+    assert proba.shape == (20,)
+    assert (proba >= 0).all()
+    assert (proba <= 1).all()
+
+
+def test_mlp_classifier_fit_one_epoch():
+    """MLPClassifier.fit runs for one epoch and records loss."""
+    from src.models.mlp_torch import MLPClassifier
+
+    x = np.random.randn(40, 8).astype(np.float32)
+    y = np.array([0] * 20 + [1] * 20, dtype=np.float32)
+
+    clf = MLPClassifier(input_dim=8, hidden_dims=[16, 8], dropout=0.0)
+    clf.fit(x, y, epochs=1, batch_size=16, verbose=False)
+
+    assert len(clf.history["loss"]) == 1
+
+
+def test_mlp_classifier_evaluate_metrics():
+    """MLPClassifier.evaluate returns expected metric keys and valid ranges."""
+    from src.models.mlp_torch import MLPClassifier
+
+    x_train = np.random.randn(40, 8).astype(np.float32)
+    y_train = np.array([0] * 20 + [1] * 20, dtype=np.float32)
+    x_test = np.random.randn(10, 8).astype(np.float32)
+    y_test = np.array([0, 0, 0, 0, 0, 1, 1, 1, 1, 1])
+
+    clf = MLPClassifier(input_dim=8, hidden_dims=[16, 8], dropout=0.0)
+    clf.fit(x_train, y_train, epochs=2, batch_size=16, verbose=False)
+    metrics = clf.evaluate(x_test, y_test)
+
+    for key in ["accuracy", "precision", "recall", "f1_score", "roc_auc"]:
+        assert key in metrics
+        assert 0.0 <= metrics[key] <= 1.0
+
+
+def test_mlp_no_torch_raises():
+    """MLPClassifier raises ImportError if torch is missing (simulated)."""
+    import importlib
+    import sys
+    from unittest.mock import patch
+
+    with (
+        patch.dict(sys.modules, {"torch": None, "torch.nn": None, "torch.optim": None}),
+        pytest.raises(ImportError, match="PyTorch is required"),
+    ):
+        from src.models import mlp_torch  # noqa: F401
+
+        importlib.reload(mlp_torch)
+        mlp_torch.MLPClassifier(input_dim=4)

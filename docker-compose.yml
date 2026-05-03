@@ -16,11 +16,12 @@ services:
       - AWS_SECRET_ACCESS_KEY=${AWS_SECRET_ACCESS_KEY:-minioadmin123}
       - MLFLOW_S3_ENDPOINT_URL=${MINIO_INTERNAL_URL:-http://minio:9000}
     command: >
+      /bin/sh -c "pip install --quiet boto3 &&
       mlflow server
       --backend-store-uri sqlite:///mlflow/mlflow.db
       --default-artifact-root ${MLFLOW_ARTIFACT_ROOT:-s3://mlflow-artifacts}
       --host 0.0.0.0
-      --port 5000
+      --port 5000"
     networks:
       - fiap-network
     depends_on:
@@ -44,7 +45,7 @@ services:
     networks:
       - fiap-network
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:9000/minio/health/live"]
+      test: ["CMD", "mc", "ready", "local"]
       interval: 30s
       timeout: 10s
       retries: 3
