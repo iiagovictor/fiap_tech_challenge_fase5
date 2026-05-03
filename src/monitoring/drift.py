@@ -58,7 +58,7 @@ def detect_drift(
         column_mapping.target = "target"
 
     # Create Evidently report
-    report = Report(metrics=[DataDriftPreset()])
+    report = Report(metrics=[DataDriftPreset(stattest_threshold=0.05)])
 
     # Generate report
     report.run(
@@ -85,31 +85,33 @@ def detect_drift(
     drift_detected = False
     drifted_features = []
     drift_scores = {}
+    overall_drift_score = 0.0
 
     try:
         metrics = report_dict.get("metrics", [])
         for metric in metrics:
+            # Overall dataset-level stats come from DatasetDriftMetric
             if metric.get("metric") == "DatasetDriftMetric":
                 result = metric.get("result", {})
                 drift_detected = result.get("dataset_drift", False)
-                drift_by_columns = result.get("drift_by_columns", {})
+                overall_drift_score = result.get("share_of_drifted_columns", 0.0)
 
+            # Per-column data comes from DataDriftTable
+            if metric.get("metric") == "DataDriftTable":
+                result = metric.get("result", {})
+                drift_by_columns = result.get("drift_by_columns", {})
                 for col, col_drift in drift_by_columns.items():
-                    drift_score = col_drift.get("drift_score", 0)
-                    drift_scores[col] = drift_score
+                    drift_scores[col] = col_drift.get("drift_score", 0)
                     if col_drift.get("drift_detected", False):
                         drifted_features.append(col)
 
     except Exception as e:
         logger.warning(f"Failed to parse drift metrics: {e}")
 
-    # Overall drift score (average of all feature drift scores)
-    overall_drift_score = sum(drift_scores.values()) / len(drift_scores) if drift_scores else 0.0
-
-    # Determine alert level
-    if overall_drift_score < 0.05:
+    # Determine alert level based on share of drifted columns (0.0 – 1.0)
+    if overall_drift_score < 0.20:
         alert_level = "green"
-    elif overall_drift_score < 0.15:
+    elif overall_drift_score < 0.50:
         alert_level = "yellow"
     else:
         alert_level = "red"

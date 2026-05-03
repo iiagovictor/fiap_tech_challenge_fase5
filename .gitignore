@@ -127,3 +127,6 @@ lambda_function.zip
 cache/
 temp/
 tmp/
+
+# Generated reports
+reports/
