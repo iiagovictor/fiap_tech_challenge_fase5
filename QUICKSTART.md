@@ -18,11 +18,11 @@ brew install --cask docker
 
 **IMPORTANTE**: Após instalar, **abra o Docker Desktop** e aguarde até aparecer "Docker is running" na barra de menu.
 
-### 2. **Verificar Python 3.12+**
+### 2. **Verificar Python 3.11+**
 
 ```bash
 python --version
-# Deve mostrar: Python 3.12.13
+# Deve mostrar: Python 3.11.x ou superior (recomendado 3.12)
 ```
 
 ---
@@ -95,6 +95,8 @@ make data-download
 # Gerar features técnicas (RSI, MACD, Bollinger Bands)
 make data-features
 ```
+
+> **Validação automática com Pandera:** cada etapa do pipeline valida o schema dos dados antes de salvar. Se houver colunas ausentes, tipos errados ou valores fora do intervalo esperado (ex: RSI > 100), um `SchemaError` é lançado com a descrição exata do problema.
 
 ### **Passo 6: Treinar Modelo LSTM**
 
@@ -255,7 +257,7 @@ curl -X POST http://localhost:8000/agent \
 
 ### **4. Rodar Testes**
 ```bash
-# Todos os testes
+# Todos os testes (cobertura mínima de 60%)
 make test
 
 # Com cobertura HTML
@@ -266,6 +268,17 @@ make test-cov
 make test-smoke
 ```
 
+**Arquivos de teste disponíveis:**
+| Arquivo | O que testa |
+|---|---|
+| `test_api.py` | Endpoints FastAPI |
+| `test_features.py` | Feature engineering + schemas Pandera |
+| `test_models.py` | Treinamento e predição LSTM |
+| `test_monitoring.py` | Métricas Prometheus e drift Evidently |
+| `test_security.py` | Guardrails e detecção de PII |
+| `test_agent_tools.py` | Ferramentas do agente |
+| `test_golden_set.py` | Golden Set de avaliação RAG |
+
 ### **5. Monitorar Drift**
 ```bash
 # Instalar Evidently
@@ -273,6 +286,25 @@ pip install -e ".[monitoring]"
 
 # Endpoint de drift
 curl http://localhost:8000/drift
+```
+
+### **6. Avaliar Qualidade do Agente RAG**
+```bash
+# Instalar dependências de avaliação
+pip install -e ".[llm]"
+
+# Golden Set — avaliação determinística (não requer LLM)
+python -c "
+from src.evaluation.golden_set import evaluate_golden_set
+print(evaluate_golden_set())  # relatório vazio sem respostas do agente
+"
+
+# RAGAS — avaliação com LLM juiz (requer Ollama rodando)
+python src/evaluation/ragas_eval.py \
+    --input data/golden_set/golden_set.jsonl \
+    --output reports/ragas_results.csv \
+    --model llama3 \
+    --endpoint http://localhost:11434
 ```
 
 ---
@@ -286,14 +318,27 @@ curl http://localhost:8000/drift
 | `make install-full` | Instala tudo (LLM + Feast + Security) |
 | `make install-llm` | Adiciona LLM/RAG (LiteLLM + ChromaDB) |
 | `make install-feast` | Adiciona Feature Store (Feast + Redis) |
+| `make dev-install` | Instala dependências de desenvolvimento (pytest, ruff) |
 | `make setup-infra` | Sobe Docker (MLflow, Redis, Prometheus, etc.) |
 | `make teardown-infra` | Para e remove todos os containers |
 | `make data-download` | Baixa dados do Yahoo Finance |
-| `make data-features` | Gera features técnicas |
+| `make data-features` | Gera features técnicas (valida com Pandera) |
+| `make feast-apply` | Registra definições no Feature Store |
+| `make feast-materialize` | Materializa features no Redis |
 | `make train` | Treina modelo LSTM |
+| `make train-baseline` | Treina modelos baseline (LogReg + RF) |
+| `make seed-rag` | Popula ChromaDB com conhecimento técnico |
 | `make serve` | Inicia API FastAPI (porta 8000) |
+| `make serve-docker` | Inicia API em container Docker |
 | `make test` | Executa testes unitários |
-| `make test-cov` | Testes com relatório de cobertura |
+| `make test-cov` | Testes com relatório de cobertura (mín. 60%) |
+| `make test-smoke` | Smoke test rápido (health check) |
+| `make lint` | Verifica código com ruff + mypy |
+| `make format` | Formata código com ruff |
+| `make dvc-repro` | Reproduz pipeline DVC end-to-end |
+| `make dvc-push` | Envia dados e modelos para remote DVC |
+| `make dvc-pull` | Baixa dados e modelos do remote DVC |
+| `make clean` | Remove arquivos temporários e caches |
 
 ---
 
@@ -391,22 +436,11 @@ STORAGE_URI=az://my-container/fiap-tc-fase5
 
 ## 📚 Documentação Adicional
 
-- **Instalação**: [INSTALL.md](INSTALL.md)
-- **Arquitetura**: [README.md](README.md)
+- **Arquitetura completa**: [README.md](README.md)
 - **Model Card**: [docs/MODEL_CARD.md](docs/MODEL_CARD.md)
 - **System Card**: [docs/SYSTEM_CARD.md](docs/SYSTEM_CARD.md)
 - **LGPD Compliance**: [docs/LGPD_PLAN.md](docs/LGPD_PLAN.md)
 - **Security (OWASP)**: [docs/OWASP_MAPPING.md](docs/OWASP_MAPPING.md)
 - **Red Team Report**: [docs/RED_TEAM_REPORT.md](docs/RED_TEAM_REPORT.md)
-
----
-
-## 💡 Próximos Passos
-
-1. ✅ **Executar pipeline básico** (data → features → train → serve)
-2. ✅ **Testar API** (health, predict, drift)
-3. ✅ **Visualizar no MLflow** (http://localhost:5001)
-4. 📊 **Criar dashboards Grafana** personalizados
-5. 🤖 **Adicionar LLM** para agente inteligente
-6. 🗄️ **Configurar Feast** para features online
-7. 🚀 **Deploy AWS/GCP** para produção
+- **Agente — exemplos**: [docs/AGENT_PREDICTION.md](docs/AGENT_PREDICTION.md)
+- **Schema Validation (Pandera)**: [SCHEMA_VALIDATION_SETUP.md](SCHEMA_VALIDATION_SETUP.md)
