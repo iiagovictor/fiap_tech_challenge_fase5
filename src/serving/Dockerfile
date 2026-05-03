@@ -15,14 +15,22 @@ ENV PATH="/opt/venv/bin:$PATH"
 COPY pyproject.toml README.md /tmp/
 WORKDIR /tmp
 
-# Install dependencies (core only to speed up build)
-RUN pip install --no-cache-dir --upgrade pip && \
-    pip install --no-cache-dir \
+# Step 1: upgrade pip + build tools
+RUN pip install --no-cache-dir --upgrade pip setuptools wheel hatchling
+
+# Step 2: core ML/API dependencies
+RUN pip install --no-cache-dir \
     pandas numpy pyarrow yfinance ta \
     fsspec s3fs \
     scikit-learn tensorflow mlflow \
     fastapi uvicorn pydantic pydantic-settings \
-    prometheus-client "evidently>=0.4.30,<0.5.0" structlog tenacity rich joblib boto3 python-dotenv ragas datasets
+    prometheus-client structlog tenacity rich joblib boto3 python-dotenv
+
+# Step 3: monitoring (Evidently) — separate step to catch failures explicitly
+RUN pip install --no-cache-dir "evidently>=0.4.30,<0.5.0"
+
+# Step 4: RAG/evaluation extras
+RUN pip install --no-cache-dir ragas datasets
 
 # ============================================================
 # Final stage
