@@ -241,10 +241,94 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
 # ============================================================
 # FastAPI Application
 # ============================================================
+_DESCRIPTION = """
+## Plataforma MLOps/LLMOps — FIAP Tech Challenge Fase 5
+
+API REST para predição de direção de preço de ações da B3 com agente LLM.
+
+### Funcionalidades
+
+| Endpoint | Método | Descrição |
+|---|---|---|
+| `/health` | GET | Status da API e do modelo |
+| `/features` | GET | Features usadas pelo modelo carregado |
+| `/predict` | POST | Predição LSTM de alta/baixa (próximos 5 dias) |
+| `/agent` | POST | Agente LLM ReAct com RAG financeiro |
+| `/drift` | GET | Relatório de data drift (Evidently) |
+| `/metrics` | GET | Métricas Prometheus |
+
+### Modelo LSTM
+
+O modelo é uma rede LSTM treinada com **24 indicadores técnicos** calculados a partir de
+dados OHLCV do Yahoo Finance (yfinance):
+
+- **Tendência**: SMA 5/10/20/50, EMA 12/26
+- **Momentum**: RSI(14), MACD, MACD Signal, MACD Histogram
+- **Volatilidade**: Bollinger Bands (superior/média/inferior/largura), ATR(14)
+- **Volume**: OBV, Volume SMA(20)
+- **Retorno**: `price_change` (1d), `price_change_5d` (5d)
+
+**Target**: `1` se o preço de fechamento sobe em 5 dias úteis, `0` se cai.
+
+### Agente LLM
+
+O agente segue o padrão **ReAct** (Reasoning + Acting). A cada passo decide qual ferramenta
+chamar, observa o resultado e repete até formular uma resposta.
+
+Ferramentas disponíveis:
+- `get_stock_price_history` — histórico de preços e variação percentual
+- `calculate_technical_indicators` — RSI, MACD, médias móveis com interpretação
+- `predict_stock_direction` — predição LSTM com recomendação
+- `compare_stocks` — tabela comparativa de performance entre ativos
+
+### Segurança
+
+Todas as queries ao agente passam por guardrails que detectam prompt injection e PII.
+
+### Ativos suportados por padrão
+
+`ITUB4.SA` · `PETR4.SA` · `VALE3.SA` · `BBDC4.SA` · `BBAS3.SA` · `^BVSP`
+"""
+
+_TAGS_METADATA = [
+    {
+        "name": "Observability",
+        "description": "Health check, métricas Prometheus e status do modelo.",
+    },
+    {
+        "name": "Prediction",
+        "description": (
+            "Predição de direção de preço com modelo LSTM. "
+            "Usa Feast Online Store (Redis) com fallback automático para features locais."
+        ),
+    },
+    {
+        "name": "Agent",
+        "description": (
+            "Agente LLM ReAct com RAG. Responde perguntas em linguagem natural "
+            "sobre ações da B3 usando ferramentas de análise técnica."
+        ),
+    },
+    {
+        "name": "Features",
+        "description": "Informações sobre features disponíveis no modelo e no dataset.",
+    },
+    {
+        "name": "Monitoring",
+        "description": "Data drift detection com Evidently e métricas de monitoramento.",
+    },
+]
+
 app = FastAPI(
     title="Stock LSTM Prediction API",
-    description="MLOps platform for stock price direction prediction with LLM agent",
+    description=_DESCRIPTION,
     version="1.0.0",
+    openapi_tags=_TAGS_METADATA,
+    contact={
+        "name": "FIAP Tech Challenge Fase 5",
+        "url": "https://github.com/iiagovictor/fiap_tech_challenge_fase5",
+    },
+    license_info={"name": "MIT", "identifier": "MIT"},
     lifespan=lifespan,
 )
 
@@ -288,57 +372,161 @@ async def track_requests(
 class HealthResponse(BaseModel):
     model_config = {"protected_namespaces": ()}
 
-    status: str
-    timestamp: str
-    model_loaded: bool
+    status: str = Field(
+        ...,
+        description="`healthy` se o modelo está carregado, `degraded` caso contrário.",
+        examples=["healthy"],
+    )
+    timestamp: str = Field(
+        ...,
+        description="Horário da resposta em ISO 8601.",
+        examples=["2026-05-03T10:00:00"],
+    )
+    model_loaded: bool = Field(
+        ...,
+        description="`true` se o modelo LSTM está em memória e pronto para predizer.",
+        examples=[True],
+    )
 
 
 class PredictionRequest(BaseModel):
-    ticker: str = Field(..., description="Stock ticker (e.g., ITUB4.SA)")
+    ticker: str = Field(
+        ...,
+        description=(
+            "Ticker do ativo no formato Yahoo Finance. "
+            "Exemplos: `ITUB4.SA`, `PETR4.SA`, `VALE3.SA`, `^BVSP`."
+        ),
+        examples=["ITUB4.SA"],
+    )
     timestamp: datetime | None = Field(
         None,
-        description="Timestamp for feature retrieval (default: now)",
+        description=(
+            "Momento de referência para recuperar as features (padrão: agora). "
+            "Útil para backtesting. Formato ISO 8601."
+        ),
+        examples=[None],
     )
+
+    model_config = {
+        "json_schema_extra": {
+            "examples": [
+                {"ticker": "ITUB4.SA"},
+                {"ticker": "PETR4.SA", "timestamp": "2026-04-01T09:00:00"},
+            ]
+        }
+    }
 
 
 class PredictionResponse(BaseModel):
     model_config = {"protected_namespaces": ()}
 
-    ticker: str
-    prediction: int = Field(..., description="Predicted direction: 1 (up), 0 (down)")
-    probability: float = Field(..., description="Probability of upward movement")
-    timestamp: str
-    model_version: str | None = None
+    ticker: str = Field(..., description="Ticker consultado.", examples=["ITUB4.SA"])
+    prediction: int = Field(
+        ...,
+        description="Direção prevista: `1` = alta nos próximos 5 dias, `0` = baixa.",
+        examples=[1],
+    )
+    probability: float = Field(
+        ...,
+        description=(
+            "Probabilidade de alta prevista pelo modelo (0.0 a 1.0). "
+            "Valores próximos a 0.5 indicam incerteza."
+        ),
+        examples=[0.67],
+    )
+    timestamp: str = Field(
+        ...,
+        description="Horário da predição em ISO 8601.",
+        examples=["2026-05-03T10:00:00"],
+    )
+    model_version: str | None = Field(
+        None,
+        description="Versão ou stage do modelo no MLflow Registry.",
+        examples=["lstm_v1"],
+    )
 
 
 class AgentRequest(BaseModel):
-    query: str = Field(..., description="Natural language query about stocks")
-    ticker: str | None = Field(None, description="Optional ticker for context")
+    query: str = Field(
+        ...,
+        description="Pergunta em linguagem natural sobre ações da B3.",
+        examples=["Qual a tendência da VALE3.SA nos próximos dias?"],
+    )
+    ticker: str | None = Field(
+        None,
+        description="Ticker opcional para contextualizar a pergunta.",
+        examples=["VALE3.SA"],
+    )
+
+    model_config = {
+        "json_schema_extra": {
+            "examples": [
+                {"query": "Qual a tendência da VALE3.SA?", "ticker": "VALE3.SA"},
+                {"query": "Compare o desempenho de ITUB4.SA e BBDC4.SA no último mês"},
+                {"query": "A PETR4.SA vai valorizar nos próximos dias?", "ticker": "PETR4.SA"},
+                {"query": "Calcule os indicadores técnicos da BBAS3.SA", "ticker": "BBAS3.SA"},
+                {"query": "Quais tickers estão disponíveis?"},
+            ]
+        }
+    }
 
 
 class AgentResponse(BaseModel):
-    query: str
-    response: str
-    sources: list[str] = Field(default_factory=list)
-    timestamp: str
+    query: str = Field(..., description="Pergunta original recebida.")
+    response: str = Field(..., description="Resposta gerada pelo agente LLM.")
+    sources: list[str] = Field(
+        default_factory=list,
+        description="Ferramentas e fontes usadas pelo agente para formular a resposta.",
+        examples=[
+            [
+                "get_stock_price_history(ticker=VALE3.SA)",
+                "calculate_technical_indicators(ticker=VALE3.SA)",
+            ]
+        ],
+    )
+    timestamp: str = Field(
+        ...,
+        description="Horário da resposta em ISO 8601.",
+        examples=["2026-05-03T10:00:00"],
+    )
 
 
 class FeaturesResponse(BaseModel):
     model_config = {"protected_namespaces": ()}
 
-    model_features: list[str] = Field(..., description="Features used by the loaded model")
-    dataset_features: list[str] | None = Field(
-        None, description="Features available in the dataset"
+    model_features: list[str] = Field(
+        ...,
+        description="Lista de features usadas pelo modelo LSTM carregado.",
+        examples=[["rsi_14", "macd", "macd_signal", "sma_20", "ema_12"]],
     )
-    total_model_features: int
-    total_dataset_features: int | None = None
-    timestamp: str
+    dataset_features: list[str] | None = Field(
+        None,
+        description=(
+            "Features disponíveis no dataset (Parquet). "
+            "`null` se o arquivo não estiver acessível."
+        ),
+    )
+    total_model_features: int = Field(
+        ...,
+        description="Total de features do modelo.",
+        examples=[24],
+    )
+    total_dataset_features: int | None = Field(
+        None,
+        description="Total de features no dataset. `null` se não acessível.",
+        examples=[24],
+    )
+    timestamp: str = Field(
+        ...,
+        description="Horário da resposta em ISO 8601.",
+        examples=["2026-05-03T10:00:00"],
+    )
 
 
 # ============================================================
 # Endpoints
 # ============================================================
-@app.get("/", response_model=dict)
+@app.get("/", response_model=dict, include_in_schema=False)
 async def root() -> dict:
     """Root endpoint."""
     return {
@@ -350,9 +538,48 @@ async def root() -> dict:
     }
 
 
-@app.get("/health", response_model=HealthResponse)
+@app.get(
+    "/health",
+    response_model=HealthResponse,
+    tags=["Observability"],
+    summary="Health check da API",
+    responses={
+        200: {
+            "description": "API operacional (modelo pode estar ou não carregado).",
+            "content": {
+                "application/json": {
+                    "examples": {
+                        "healthy": {
+                            "summary": "Modelo carregado",
+                            "value": {
+                                "status": "healthy",
+                                "timestamp": "2026-05-03T10:00:00",
+                                "model_loaded": True,
+                            },
+                        },
+                        "degraded": {
+                            "summary": "Sem modelo carregado",
+                            "value": {
+                                "status": "degraded",
+                                "timestamp": "2026-05-03T10:00:00",
+                                "model_loaded": False,
+                            },
+                        },
+                    }
+                }
+            },
+        }
+    },
+)
 async def health_check() -> HealthResponse:
-    """Health check endpoint."""
+    """
+    Verifica o status da API e se o modelo LSTM está carregado em memória.
+
+    - **`healthy`**: modelo carregado e pronto para predições.
+    - **`degraded`**: API no ar mas modelo não carregado — `/predict` retornará `503`.
+
+    Se o estado for `degraded`, execute `make train` e reinicie a API.
+    """
     return HealthResponse(
         status="healthy" if model is not None else "degraded",
         timestamp=datetime.now().isoformat(),
@@ -360,20 +587,59 @@ async def health_check() -> HealthResponse:
     )
 
 
-@app.get("/metrics", response_class=PlainTextResponse)
+@app.get(
+    "/metrics",
+    response_class=PlainTextResponse,
+    tags=["Observability"],
+    summary="Métricas Prometheus",
+    responses={
+        200: {
+            "description": "Métricas no formato Prometheus text exposition.",
+            "content": {"text/plain": {}},
+        }
+    },
+)
 async def metrics() -> bytes:
-    """Prometheus metrics endpoint."""
+    """
+    Retorna métricas da API no formato Prometheus text exposition.
+
+    **Métricas disponíveis:**
+
+    | Métrica | Tipo | Labels | Descrição |
+    |---|---|---|---|
+    | `http_requests_total` | Counter | `method`, `endpoint`, `status` | Total de requisições HTTP |
+    | `http_request_duration_seconds` | Histogram | `method`, `endpoint` | Latência por endpoint |
+    | `api_predictions_total` | Counter | `model_type` | Total de predições via `/predict` |
+    | `feature_drift_score` | Gauge | — | Último score de drift (PSI) do `/drift` |
+
+    Configure o Prometheus para fazer scrape adicionando ao `prometheus.yml`:
+    ```yaml
+    scrape_configs:
+      - job_name: 'stock-api'
+        static_configs:
+          - targets: ['api:8000']
+    ```
+    """
     return generate_latest()
 
 
-@app.get("/features", response_model=FeaturesResponse)
+@app.get(
+    "/features",
+    response_model=FeaturesResponse,
+    tags=["Features"],
+    summary="Features do modelo e do dataset",
+)
 async def get_features() -> FeaturesResponse:
     """
-    Get information about available features.
+    Retorna informações sobre as features disponíveis no modelo carregado e no dataset.
 
-    Returns:
-    - Features used by the loaded model
-    - Features available in the dataset (if accessible)
+    - **`model_features`**: colunas exatas usadas pelo modelo LSTM registrado no MLflow.
+      São as features que devem estar presentes nos dados de entrada do `/predict`.
+    - **`dataset_features`**: colunas disponíveis em `data/features/stock_features.parquet`.
+      Inclui colunas de metadados (`ticker`, `Date`) que são excluídas antes da predição.
+
+    Se `model_features` estiver vazio, o modelo foi salvo sem metadados.
+    Execute `make train` para regenerar com os metadados corretos.
     """
     # Get model features
     model_features_list = feature_names if feature_names else []
@@ -399,13 +665,49 @@ async def get_features() -> FeaturesResponse:
     )
 
 
-@app.post("/predict", response_model=PredictionResponse)
+@app.post(
+    "/predict",
+    response_model=PredictionResponse,
+    tags=["Prediction"],
+    summary="Predição de direção de preço (LSTM)",
+    responses={
+        200: {
+            "description": "Predição gerada com sucesso.",
+            "content": {
+                "application/json": {
+                    "example": {
+                        "ticker": "ITUB4.SA",
+                        "prediction": 1,
+                        "probability": 0.67,
+                        "timestamp": "2026-05-03T10:00:00",
+                        "model_version": "lstm_v1",
+                    }
+                }
+            },
+        },
+        404: {"description": "Ticker não encontrado no dataset de features."},
+        503: {"description": "Modelo não carregado ou features indisponíveis."},
+        500: {"description": "Erro interno durante a predição."},
+    },
+)
 async def predict(request: PredictionRequest) -> PredictionResponse:
     """
-    Predict stock price direction using LSTM model.
+    Realiza predição de direção de preço para os próximos 5 dias úteis usando o modelo LSTM.
 
-    Returns prediction (1 = up, 0 = down) and probability.
-    Uses Feast if available, otherwise falls back to local features.
+    **Fluxo de features (em ordem de prioridade):**
+    1. **Feast Online Store (Redis)** — baixa latência, requer `make feast-materialize`.
+    2. **Parquet local** (`data/features/stock_features.parquet`) — fallback automático.
+    3. Se nenhuma fonte estiver disponível, retorna `503`.
+
+    **Interpretação do resultado:**
+
+    | `prediction` | `probability` | Sinal |
+    |---|---|---|
+    | `1` | `> 0.6` | Alta esperada — sinal de **compra** |
+    | `0` | `< 0.4` | Queda esperada — sinal de **venda** |
+    | `1` ou `0` | `0.4 – 0.6` | Incerteza alta — sinal **neutro** |
+
+    > **Disclaimer:** As predições não constituem recomendação de investimento.
     """
     if model is None:
         raise HTTPException(status_code=503, detail="Model not loaded")
@@ -510,15 +812,82 @@ async def predict(request: PredictionRequest) -> PredictionResponse:
         raise HTTPException(status_code=500, detail=f"Prediction failed: {str(e)}") from e
 
 
-@app.post("/agent", response_model=AgentResponse)
+@app.post(
+    "/agent",
+    response_model=AgentResponse,
+    tags=["Agent"],
+    summary="Consulta ao agente LLM financeiro (ReAct + RAG)",
+    responses={
+        200: {
+            "description": "Resposta gerada pelo agente.",
+            "content": {
+                "application/json": {
+                    "examples": {
+                        "com_ferramentas": {
+                            "summary": "Agente usou ferramentas",
+                            "value": {
+                                "query": "Qual a tendência da VALE3.SA?",
+                                "response": (
+                                    "A VALE3.SA apresenta RSI de 58 (neutro-positivo) e MACD "
+                                    "acima da linha de sinal, sugerindo tendência de alta moderada."
+                                ),
+                                "sources": [
+                                    "get_stock_price_history(ticker=VALE3.SA)",
+                                    "calculate_technical_indicators(ticker=VALE3.SA)",
+                                ],
+                                "timestamp": "2026-05-03T10:00:00",
+                            },
+                        },
+                        "fallback": {
+                            "summary": "Fallback direto (LLM indisponível)",
+                            "value": {
+                                "query": "Compare ITUB4 e BBDC4",
+                                "response": "Comparação: ITUB4.SA +2.3%, BBDC4.SA +1.1%",
+                                "sources": ["Yahoo Finance", "Comparative Analysis"],
+                                "timestamp": "2026-05-03T10:00:00",
+                            },
+                        },
+                    }
+                }
+            },
+        },
+        500: {"description": "Erro interno no agente."},
+    },
+)
 async def agent_query(request: AgentRequest) -> AgentResponse:
     """
-    Query the LLM agent with financial tools and RAG.
+    Consulta o agente LLM com ferramentas de análise financeira e RAG (ChromaDB).
 
-    The agent can:
-    - Answer questions about stocks using RAG
-    - Execute financial analysis tools
-    - Provide market insights
+    O agente segue o padrão **ReAct** (Reasoning + Acting): a cada passo decide qual
+    ferramenta chamar, observa o resultado e itera até formular uma resposta fundamentada.
+
+    **Ferramentas disponíveis:**
+
+    | Ferramenta | Parâmetros | Retorna |
+    |---|---|---|
+    | `get_stock_price_history` | `ticker`, `period` | Preço atual, máx/mín, variação %, volume |
+    | `calculate_technical_indicators` | `ticker`, `period` | RSI, MACD, SMAs, EMAs, Bollinger |
+    | `predict_stock_direction` | `ticker` | Predição LSTM + recomendação |
+    | `compare_stocks` | `tickers` (lista), `period` | Tabela comparativa de performance |
+
+    **Lógica de fallback (em ordem):**
+    ```
+    1. Agente ReAct com LLM configurado (.env)
+          ↓ (LLM indisponível ou timeout)
+    2. Execução direta das ferramentas por keyword matching
+          ↓
+    3. Dados brutos do yfinance + aviso de baixa confiênça
+    ```
+
+    **Guardrails:** toda query é validada contra padrões de prompt injection antes
+    de chegar ao LLM (`src/security/guardrails.py`).
+
+    **Exemplos de perguntas suportadas:**
+    - `"Qual a cotação atual da PETR4.SA?"`
+    - `"Calcule os indicadores técnicos da VALE3.SA"`
+    - `"Compare ITUB4.SA e BBDC4.SA no último mês"`
+    - `"A BBAS3.SA vai valorizar nos próximos dias?"`
+    - `"Quais tickers estão disponíveis?"`
     """
     try:
         logger.info(f"Agent query: {request.query}")
@@ -665,12 +1034,64 @@ Indicadores Técnicos:
         raise HTTPException(status_code=500, detail=f"Agent query failed: {str(e)}") from e
 
 
-@app.get("/drift")
+@app.get(
+    "/drift",
+    tags=["Monitoring"],
+    summary="Relatório de drift de features (Evidently PSI)",
+    responses={
+        200: {
+            "description": "Relatório de drift gerado com sucesso.",
+            "content": {
+                "application/json": {
+                    "examples": {
+                        "sem_drift": {
+                            "summary": "Sem drift detectado",
+                            "value": {
+                                "drift_detected": False,
+                                "drift_score": 0.05,
+                                "overall_drift_score": 0.05,
+                                "features_drifted": [],
+                                "alert_level": "green",
+                                "report_path": "data/drift_report.html",
+                            },
+                        },
+                        "com_drift": {
+                            "summary": "Drift detectado em features",
+                            "value": {
+                                "drift_detected": True,
+                                "drift_score": 0.28,
+                                "overall_drift_score": 0.28,
+                                "features_drifted": ["rsi", "macd_signal"],
+                                "alert_level": "red",
+                                "report_path": "data/drift_report.html",
+                            },
+                        },
+                    }
+                }
+            },
+        },
+        500: {"description": "Erro ao executar pipeline de drift."},
+    },
+)
 async def drift_report() -> dict:
     """
-    Get latest drift detection report.
+    Executa o pipeline de detecção de drift e retorna o relatório mais recente.
 
-    Returns drift metrics and alerts.
+    Utiliza o **Evidently AI** com a métrica **PSI (Population Stability Index)**
+    para comparar a distribuição atual das features com a baseline de treino.
+
+    **Níveis de alerta:**
+
+    | `alert_level` | `drift_score` | Significado |
+    |---|---|---|
+    | `green` | `< 0.1` | Distribuição estável |
+    | `yellow` | `0.1 – 0.2` | Drift moderado — monitorar |
+    | `red` | `> 0.2` | Drift significativo — retraining recomendado |
+
+    **Features monitoradas:** `close`, `rsi`, `macd`, `macd_signal`, `bollinger_upper`,
+    `bollinger_lower`, `sma_20`, `sma_50`.
+
+    O relatório HTML completo é salvo em `report_path` dentro do container.
     """
     try:
         result = _run_drift_monitoring_pipeline()

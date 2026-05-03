@@ -23,6 +23,7 @@
 - [Agente LLM (ReAct + RAG)](#agente-llm-react--rag)
 - [Monitoramento](#monitoramento)
 - [Testes](#testes)
+- [Avaliação de Qualidade RAG (RAGAS)](#avaliação-de-qualidade-rag-ragas)
 - [Pipeline DVC (Versionamento de Dados)](#pipeline-dvc-versionamento-de-dados)
 - [Referência da API](#referência-da-api)
 - [Estrutura do Projeto](#estrutura-do-projeto)
@@ -43,10 +44,12 @@ Esta plataforma é uma solução **MLOps/LLMOps cloud-agnostic** desenvolvida co
 |---|---|
 | **Predição de ações** | Modelo LSTM que classifica se uma ação vai subir ou cair nos próximos 5 dias úteis |
 | **Feature Engineering** | Calcula 24 indicadores técnicos (RSI, MACD, Bollinger Bands, ATR, OBV, médias móveis) |
+| **Schema Validation** | Pandera valida schemas dos dados em todas as etapas do pipeline (raw, features, treino) |
 | **Feature Store** | Feast com offline store (Parquet) e online store (Redis) |
 | **Model Registry** | MLflow para rastrear experimentos e versionar modelos em produção |
 | **API REST** | FastAPI com endpoints de predição, saúde, métricas e drift |
 | **Agente LLM** | Agente ReAct com RAG que responde perguntas sobre ações em linguagem natural |
+| **Avaliação RAG** | RAGAS (Faithfulness, Answer Relevancy, Context Precision/Recall) + Golden Set com métricas de similaridade |
 | **Monitoramento** | Prometheus + Grafana + Evidently para observabilidade completa |
 | **Segurança** | Guardrails contra prompt injection + detecção de PII com Presidio |
 
@@ -718,11 +721,95 @@ make test-smoke
 | Arquivo | O que testa |
 |---|---|
 | `tests/test_api.py` | Endpoints FastAPI (health, predict, agent, drift, metrics) |
-| `tests/test_features.py` | Feature engineering — schema e valores dos indicadores |
+| `tests/test_features.py` | Feature engineering + validação de schemas Pandera |
 | `tests/test_models.py` | Treinamento e predição do LSTM |
+| `tests/test_monitoring.py` | Métricas Prometheus, detecção de drift (Evidently), baseline |
+| `tests/test_security.py` | Guardrails contra prompt injection e detecção de PII |
+| `tests/test_agent_tools.py` | Ferramentas do agente (`tools.py`) — mock do yfinance e LSTM |
+| `tests/test_golden_set.py` | Golden set de avaliação — carga, pontuação e relatório RAGAS |
 | `tests/conftest.py` | Fixtures compartilhadas (app client, dados de teste) |
 
 **Coverage mínimo:** 60% (configurado em `pyproject.toml`).
+
+> **Nota:** Os módulos `src/agent/rag_pipeline.py`, `src/agent/react_agent.py` e `src/agent/seed_rag.py` são excluídos da medição de cobertura pois dependem de `chromadb` e `litellm`, não instalados no ambiente de CI.
+
+---
+
+## Avaliação de Qualidade RAG (RAGAS)
+
+O módulo `src/evaluation/` fornece duas camadas de avaliação para o agente RAG:
+
+### Golden Set — avaliação determinística
+
+O Golden Set é um conjunto fixo de pares (pergunta → resposta esperada) usado para medir a qualidade das respostas do agente de forma reproduzível e sem depender de um LLM juiz.
+
+**Formato do arquivo** (`data/golden_set/golden_set.jsonl`):
+
+```jsonl
+{"id": "gs-001", "query": "Qual a tendência da ITUB4.SA?", "ticker": "ITUB4.SA", "expected_answer": "A tendência de curto prazo é de alta moderada...", "contexts": ["RSI neutro indica...", "SMA 20 como suporte..."]}
+```
+
+**Métricas calculadas:**
+
+| Métrica | Cálculo | Intervalo |
+|---|---|---|
+| `exact_match` | Comparação literal normalizada | `true` / `false` |
+| `token_overlap` | Interseção de tokens / tokens esperados | 0.0 – 1.0 |
+| `similarity` | SequenceMatcher (difflib) | 0.0 – 1.0 |
+| `score` | `0.5 × exact + 0.3 × overlap + 0.2 × similarity` | 0.0 – 1.0 |
+
+**Uso programático:**
+
+```python
+from src.evaluation.golden_set import evaluate_golden_set
+
+# agent_responses = {"gs-001": "resposta do agente", ...}
+summary = evaluate_golden_set(agent_responses=agent_responses)
+print(f"Avaliadas: {summary['evaluated']}")
+print(f"Score médio: {summary['average_score']}")
+print(f"Exact matches: {summary['exact_matches']}")
+```
+
+### RAGAS — avaliação com LLM juiz
+
+O `src/evaluation/ragas_eval.py` usa a biblioteca [RAGAS](https://docs.ragas.io/) com **Ollama local** como LLM juiz, evitando dependência de APIs pagas.
+
+**Métricas RAGAS disponíveis:**
+
+| Métrica | Descrição |
+|---|---|
+| **Faithfulness** | A resposta gerada é fiel ao contexto recuperado? |
+| **Answer Relevancy** | A resposta é relevante para a pergunta? |
+| **Context Precision** | O contexto recuperado é preciso (sem ruído)? |
+| **Context Recall** | O contexto recuperado cobre a resposta esperada? |
+
+**Executar avaliação RAGAS** (requer Ollama rodando com `make setup-infra`):
+
+```bash
+# Ativar dependências de avaliação
+pip install -e ".[llm]"
+
+# Executar avaliação com dataset JSONL
+python src/evaluation/ragas_eval.py --input data/golden_set/golden_set.jsonl \
+                                    --output reports/ragas_results.csv \
+                                    --model llama3 \
+                                    --endpoint http://localhost:11434
+```
+
+**Exemplo de saída:**
+
+```
+📊 RAGAS Evaluation Results
+────────────────────────────────────────
+  faithfulness          : 0.81
+  answer_relevancy      : 0.76
+  context_precision     : 0.73
+  context_recall        : 0.69
+────────────────────────────────────────
+Results saved to: reports/ragas_results.csv
+```
+
+> **Nota:** Para usar OpenAI ou Gemini como LLM juiz, passe `--model openai/gpt-4o-mini` e configure a chave em `.env`.
 
 ---
 
@@ -884,6 +971,7 @@ fiap_tech_challenge_fase5/
 │   ├── raw/                        # Dados OHLCV brutos do yfinance
 │   ├── features/                   # Features com indicadores técnicos
 │   ├── models/                     # Modelos treinados (.keras)
+│   ├── golden_set/                 # Golden Set JSONL para avaliação do agente
 │   ├── chromadb/                   # Banco vetorial local (RAG)
 │   ├── feast/                      # Registry do Feast
 │   └── minio/                      # Artefatos MLflow (objetos simulados)
@@ -921,6 +1009,9 @@ fiap_tech_challenge_fase5/
 │   │   ├── tools.py                # Ferramentas do agente (yfinance, LSTM, indicadores)
 │   │   ├── rag_pipeline.py         # Pipeline RAG com ChromaDB
 │   │   └── seed_rag.py             # Popula ChromaDB com conhecimento técnico
+│   ├── evaluation/
+│   │   ├── golden_set.py           # Golden Set — avaliação determinística (exact match, overlap, similarity)
+│   │   └── ragas_eval.py           # Avaliação RAGAS com Ollama (faithfulness, relevancy, precision, recall)
 │   ├── monitoring/
 │   │   ├── metrics.py              # Registro de métricas Prometheus
 │   │   └── drift.py                # Détecção de drift com Evidently
@@ -934,8 +1025,12 @@ fiap_tech_challenge_fase5/
 └── tests/                          # Suite de testes
     ├── conftest.py                 # Fixtures compartilhadas
     ├── test_api.py                 # Testes de API
-    ├── test_features.py            # Testes de feature engineering
-    └── test_models.py              # Testes de modelo
+    ├── test_features.py            # Testes de feature engineering + Pandera schemas
+    ├── test_models.py              # Testes de modelo LSTM e baselines
+    ├── test_monitoring.py          # Testes de métricas e drift
+    ├── test_security.py            # Testes de guardrails e PII
+    ├── test_agent_tools.py         # Testes de ferramentas do agente
+    └── test_golden_set.py          # Testes de avaliação Golden Set / RAGAS
 ```
 
 ---
@@ -1143,6 +1238,7 @@ pytest tests/test_api.py tests/test_features.py -v --cov=src --cov-report=term-m
 | [docs/RED_TEAM_REPORT.md](docs/RED_TEAM_REPORT.md) | Relatório de 8h de red team (OWASP LLM + MITRE ATLAS), 5 findings |
 | [docs/AGENT_PREDICTION.md](docs/AGENT_PREDICTION.md) | Exemplos detalhados de uso do agente com respostas completas |
 | [docs/DEBUGGING_AGENT.md](docs/DEBUGGING_AGENT.md) | Guia de debug do agente — como identificar alucinações vs. respostas corretas |
+| [SCHEMA_VALIDATION_SETUP.md](SCHEMA_VALIDATION_SETUP.md) | Guia de configuração e uso do Pandera para validação de schemas no pipeline |
 
 ---
 
@@ -1153,6 +1249,8 @@ pytest tests/test_api.py tests/test_features.py -v --cov=src --cov-report=term-m
 - [FastAPI Documentation](https://fastapi.tiangolo.com/)
 - [LiteLLM — 100+ LLM providers](https://docs.litellm.ai/)
 - [Evidently AI — Drift Detection](https://docs.evidentlyai.com/)
+- [RAGAS — RAG Evaluation Framework](https://docs.ragas.io/)
+- [Pandera — Data Validation](https://pandera.readthedocs.io/)
 - [OWASP Top 10 for LLMs](https://owasp.org/www-project-top-10-for-large-language-model-applications/)
 - [ChromaDB Documentation](https://docs.trychroma.com/)
 - [Presidio — PII Detection](https://microsoft.github.io/presidio/)

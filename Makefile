@@ -3,6 +3,8 @@
         train serve serve-alt stop-serve serve-docker test test-cov lint format \
         dvc-init dvc-push dvc-pull clean deploy-aws seed-rag
 
+.DEFAULT_GOAL := help
+
 # Detectar OS e configurar caminhos apropriados
 ifeq ($(OS),Windows_NT)
     PYTHON := $(CURDIR)\.venv\Scripts\python.exe
@@ -30,6 +32,11 @@ ECR_REPO := $(PROJECT)
 help:  ## Mostra este help
 	@grep -E '^[a-zA-Z_-]+:.*?## .*$$' $(MAKEFILE_LIST) | \
 	awk 'BEGIN {FS = ":.*?## "}; {printf "\033[36m%-20s\033[0m %s\n", $$1, $$2}'
+
+.DEFAULT:
+	@echo "❌ Comando '\033[31m$@\033[0m' não reconhecido."
+	@echo ""
+	@$(MAKE) help
 
 # ─── Installation ─────────────────────────────────────────────────────────────
 install:  ## Instala dependências CORE (ML + API, sem LLM)
