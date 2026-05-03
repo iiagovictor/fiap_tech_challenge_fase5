@@ -703,7 +703,7 @@ async def get_features() -> FeaturesResponse:
     },
 )
 @limiter.limit("30/minute")
-async def predict(http_request: Request, request: PredictionRequest) -> PredictionResponse:
+async def predict(request: Request, body: PredictionRequest) -> PredictionResponse:
     """
     Realiza predição de direção de preço para os próximos 5 dias úteis usando o modelo LSTM.
 
@@ -726,17 +726,15 @@ async def predict(http_request: Request, request: PredictionRequest) -> Predicti
         raise HTTPException(status_code=503, detail="Model not loaded")
 
     try:
-        timestamp = request.timestamp or datetime.now()
-        logger.info(f"Prediction request for {request.ticker} at {timestamp}")
+        timestamp = body.timestamp or datetime.now()
+        logger.info(f"Prediction request for {body.ticker} at {timestamp}")
 
         # Try Feast first, fallback to local features
         features_df = None
 
         try:
             feast_client = get_feast_client()
-            features_df = feast_client.get_online_features(
-                ticker=request.ticker, timestamp=timestamp
-            )
+            features_df = feast_client.get_online_features(ticker=body.ticker, timestamp=timestamp)
             logger.info("✅ Retrieved features from Feast")
         except Exception as feast_error:
             logger.warning(f"Feast unavailable: {feast_error}. Using local features...")
@@ -747,16 +745,16 @@ async def predict(http_request: Request, request: PredictionRequest) -> Predicti
                     df = storage.read_parquet("features/stock_features.parquet")
 
                     # Filter by ticker and get most recent data
-                    ticker_df = df[df["ticker"] == request.ticker].copy()
+                    ticker_df = df[df["ticker"] == body.ticker].copy()
                     if len(ticker_df) == 0:
-                        detail = f"No features found for ticker {request.ticker}"
+                        detail = f"No features found for ticker {body.ticker}"
                         raise HTTPException(status_code=404, detail=detail)
 
                     # Sort by date and get last row
                     if "Date" in ticker_df.columns:
                         ticker_df = ticker_df.sort_values("Date")
                     features_df = ticker_df.tail(1)
-                    logger.info(f"✅ Loaded features from local storage for {request.ticker}")
+                    logger.info(f"✅ Loaded features from local storage for {body.ticker}")
                 else:
                     raise HTTPException(
                         status_code=503,
@@ -805,13 +803,13 @@ async def predict(http_request: Request, request: PredictionRequest) -> Predicti
         prediction_class = int(prediction_proba > 0.5)
 
         logger.info(
-            f"Prediction for {request.ticker}: {prediction_class} (prob={prediction_proba:.4f})"
+            f"Prediction for {body.ticker}: {prediction_class} (prob={prediction_proba:.4f})"
         )
 
         PREDICTION_COUNT.labels(model_type="lstm").inc()
 
         return PredictionResponse(
-            ticker=request.ticker,
+            ticker=body.ticker,
             prediction=prediction_class,
             probability=float(prediction_proba),
             timestamp=datetime.now().isoformat(),
@@ -868,7 +866,7 @@ async def predict(http_request: Request, request: PredictionRequest) -> Predicti
     },
 )
 @limiter.limit("10/minute")
-async def agent_query(http_request: Request, request: AgentRequest) -> AgentResponse:
+async def agent_query(request: Request, body: AgentRequest) -> AgentResponse:
     """
     Consulta o agente LLM com ferramentas de análise financeira e RAG (ChromaDB).
 
@@ -904,14 +902,14 @@ async def agent_query(http_request: Request, request: AgentRequest) -> AgentResp
     - `"Quais tickers estão disponíveis?"`
     """
     try:
-        logger.info(f"Agent query: {request.query}")
+        logger.info(f"Agent query: {body.query}")
 
         # Try to use real agent, fallback to simple tool execution if LLM not available
         try:
             from src.agent.react_agent import get_agent
 
             agent = get_agent()
-            result = agent.query(request.query)
+            result = agent.query(body.query)
 
             # Check if agent failed (max iterations or error)
             if result.get("error") or "wasn't able to complete" in result.get("answer", ""):
@@ -935,7 +933,7 @@ async def agent_query(http_request: Request, request: AgentRequest) -> AgentResp
                 logger.warning("⚠️ Agent provided answer without using tools - may be hallucinated!")
 
             return AgentResponse(
-                query=request.query,
+                query=body.query,
                 response=result["answer"],
                 sources=sources,
                 timestamp=datetime.now().isoformat(),
@@ -952,7 +950,7 @@ async def agent_query(http_request: Request, request: AgentRequest) -> AgentResp
                 get_stock_price_history,
             )
 
-            query_lower = request.query.lower()
+            query_lower = body.query.lower()
 
             # Check query type
             if any(
@@ -968,7 +966,7 @@ Você pode consultar qualquer um desses ativos usando o endpoint /agent com o pa
 Exemplo: "Qual a cotação da PETR4.SA?" ou "Análise técnica da VALE3.SA"
 """
                 return AgentResponse(
-                    query=request.query,
+                    query=body.query,
                     response=response_text.strip(),
                     sources=["Configuration", "System"],
                     timestamp=datetime.now().isoformat(),
@@ -995,7 +993,7 @@ Detalhes:
                         response_text += f"\n• {stock['ticker']}: {pct:+.2f}% (R$ {price})"
 
                 return AgentResponse(
-                    query=request.query,
+                    query=body.query,
                     response=response_text.strip(),
                     sources=["Yahoo Finance", "Comparative Analysis"],
                     timestamp=datetime.now().isoformat(),
@@ -1003,13 +1001,13 @@ Detalhes:
 
             else:
                 # Default: Stock analysis for specific ticker
-                ticker = request.ticker or "ITUB4.SA"
+                ticker = body.ticker or "ITUB4.SA"
 
                 # Extract ticker from query if present
                 import re
 
                 ticker_pattern = r"([A-Z]{4}\d{1,2}\.SA|\^BVSP)"
-                matches = re.findall(ticker_pattern, request.query.upper())
+                matches = re.findall(ticker_pattern, body.query.upper())
                 if matches:
                     ticker = matches[0]
 
@@ -1035,7 +1033,7 @@ Indicadores Técnicos:
 """
 
                 return AgentResponse(
-                    query=request.query,
+                    query=body.query,
                     response=response_text.strip(),
                     sources=["Yahoo Finance", "Technical Analysis"],
                     timestamp=datetime.now().isoformat(),

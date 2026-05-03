@@ -1,0 +1,445 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>Plataforma MLOps &mdash; Apresentação de Negócio</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"/>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;600;700;800;900&family=Inter:wght@300;400;500;600&display=swap"/>
+<style>
+  :root {
+    --bg:#08090f; --surface:#0f1018; --card:#14161f; --card2:#1c1e2c;
+    --a1:#6c63ff; --a2:#00d4aa; --a3:#ff6b6b; --a4:#f7c948;
+    --text:#e4e6f0; --muted:#7a7d95; --border:#252838;
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  html,body{width:100%;height:100%;background:var(--bg);color:var(--text);font-family:'Inter',sans-serif;overflow:hidden}
+  .deck{width:100vw;height:100vh;position:relative;overflow:hidden}
+  .slide{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:44px 60px;opacity:0;transform:translateX(56px);transition:opacity .5s ease,transform .5s ease;pointer-events:none}
+  .slide.active{opacity:1;transform:translateX(0);pointer-events:auto}
+  .slide.exit{opacity:0;transform:translateX(-56px)}
+  .prog{position:fixed;top:0;left:0;height:3px;background:linear-gradient(90deg,var(--a1),var(--a2));transition:width .4s ease;z-index:100}
+  .nav{position:fixed;bottom:28px;left:50%;transform:translateX(-50%);display:flex;align-items:center;gap:14px;background:rgba(20,22,31,.85);backdrop-filter:blur(14px);border:1px solid var(--border);border-radius:50px;padding:9px 22px;z-index:100}
+  .nav button{background:none;border:none;color:var(--muted);font-size:18px;cursor:pointer;transition:color .2s}
+  .nav button:hover{color:var(--text)}
+  .cnt{font-size:12px;color:var(--muted);min-width:52px;text-align:center}
+  .dots{display:flex;gap:5px;align-items:center}
+  .dot{width:5px;height:5px;border-radius:50%;background:var(--border);transition:all .3s;cursor:pointer}
+  .dot.active{background:var(--a1);width:18px;border-radius:3px}
+  h1{font-family:'Poppins',sans-serif;font-weight:800;line-height:1.1}
+  h2{font-family:'Poppins',sans-serif;font-weight:700;line-height:1.2}
+  h3{font-family:'Poppins',sans-serif;font-weight:600}
+  .tag{display:inline-flex;align-items:center;gap:6px;padding:4px 14px;border-radius:20px;font-size:11px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;margin-bottom:18px}
+  .tag.purple{background:rgba(108,99,255,.18);color:var(--a1);border:1px solid rgba(108,99,255,.3)}
+  .tag.teal{background:rgba(0,212,170,.14);color:var(--a2);border:1px solid rgba(0,212,170,.25)}
+  .tag.red{background:rgba(255,107,107,.14);color:var(--a3);border:1px solid rgba(255,107,107,.25)}
+  .tag.gold{background:rgba(247,201,72,.14);color:var(--a4);border:1px solid rgba(247,201,72,.25)}
+  .grad{background:linear-gradient(135deg,var(--a1),var(--a2));-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text}
+  .orb{position:fixed;border-radius:50%;filter:blur(90px);pointer-events:none;z-index:-1}
+  .orb1{width:480px;height:480px;background:rgba(108,99,255,.07);top:-160px;right:-160px;animation:fl 9s ease-in-out infinite}
+  .orb2{width:360px;height:360px;background:rgba(0,212,170,.05);bottom:-100px;left:-100px;animation:fl 9s ease-in-out infinite 4s}
+  @keyframes fl{0%,100%{transform:translate(0,0)}50%{transform:translate(16px,-16px)}}
+  .kbd-hint{position:fixed;top:18px;right:24px;font-size:11px;color:var(--muted);display:flex;gap:6px;align-items:center}
+  kbd{background:var(--card);border:1px solid var(--border);border-radius:4px;padding:2px 7px;font-size:10px}
+
+  /* S1 */
+  #s1{background:radial-gradient(ellipse 80% 55% at 50% -5%,rgba(108,99,255,.22) 0%,transparent 65%),var(--bg)}
+  #s1 .logo{width:84px;height:84px;border-radius:24px;background:linear-gradient(135deg,var(--a1),var(--a2));display:flex;align-items:center;justify-content:center;font-size:42px;margin:0 auto 28px;box-shadow:0 18px 55px rgba(108,99,255,.38);animation:float 3s ease-in-out infinite}
+  @keyframes float{0%,100%{transform:translateY(0)}50%{transform:translateY(-8px)}}
+  #s1 .sub{font-size:15px;color:var(--muted);margin-top:14px;text-align:center;max-width:640px;line-height:1.7}
+  #s1 .badges{display:flex;flex-wrap:wrap;justify-content:center;gap:10px;margin-top:28px}
+  #s1 .badge{display:flex;align-items:center;gap:8px;padding:8px 18px;background:var(--card);border:1px solid var(--border);border-radius:50px;font-size:13px;color:var(--muted)}
+  #s1 .badge span{color:var(--text);font-weight:600}
+
+  /* S2 */
+  #s2 .ctx-grid{display:grid;grid-template-columns:1fr 1fr;gap:16px;max-width:860px;width:100%;margin-top:22px}
+  .ctx-card{background:var(--card);border:1px solid var(--border);border-radius:16px;padding:20px 22px}
+  .ctx-card .ci{font-size:26px;margin-bottom:8px}
+  .ctx-card h3{font-size:14px;margin-bottom:7px}
+  .ctx-card p{font-size:12px;color:var(--muted);line-height:1.6}
+  .ctx-q{font-style:italic;font-size:11px;color:var(--a3);border-left:3px solid var(--a3);padding-left:10px;margin-top:10px;line-height:1.5}
+
+  /* S3 */
+  #s3 .gaps-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:11px;max-width:960px;width:100%;margin-top:18px}
+  .gap-item{background:var(--card);border:1px solid var(--border);border-radius:13px;padding:13px 15px;position:relative}
+  .gap-item .gn{font-size:10px;font-weight:700;color:var(--a3);font-family:monospace;letter-spacing:.06em;margin-bottom:4px}
+  .gap-item h3{font-size:12px;font-weight:600;margin-bottom:3px;line-height:1.3;padding-right:48px}
+  .gap-item p{font-size:11px;color:var(--muted);line-height:1.4}
+  .sev{position:absolute;top:10px;right:10px;font-size:9px;font-weight:700;padding:2px 7px;border-radius:8px}
+  .sev-c{background:rgba(255,107,107,.18);color:var(--a3)}
+  .sev-h{background:rgba(247,201,72,.15);color:var(--a4)}
+
+  /* S4 */
+  #s4 .mt{max-width:900px;width:100%;margin-top:20px;display:flex;flex-direction:column;gap:7px}
+  .mr{display:grid;grid-template-columns:175px 1fr 1fr 1fr;background:var(--card);border:1px solid var(--border);border-radius:11px;overflow:hidden}
+  .mr.hdr{background:var(--card2);border-color:var(--a1)}
+  .mc{padding:10px 13px;font-size:11px;border-right:1px solid var(--border)}
+  .mc:last-child{border-right:none}
+  .mr.hdr .mc{font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.07em;color:var(--muted)}
+  .md{font-weight:600;font-size:12px}
+  .l0{color:var(--a3)}.l1{color:var(--a4)}.l2{color:var(--a2);font-weight:600}
+  .hlr{border-color:rgba(0,212,170,.3)!important}
+  .hlr .mc{background:rgba(0,212,170,.04)}
+
+  /* S5 */
+  #s5 .map-list{display:flex;flex-direction:column;gap:9px;max-width:900px;width:100%;margin-top:18px}
+  .map-row{display:grid;grid-template-columns:1fr auto 1fr;align-items:center;gap:12px}
+  .map-gap{background:rgba(255,107,107,.07);border:1px solid rgba(255,107,107,.22);border-radius:11px;padding:11px 14px}
+  .map-sol{background:rgba(0,212,170,.07);border:1px solid rgba(0,212,170,.18);border-radius:11px;padding:11px 14px}
+  .map-arrow{font-size:20px;color:var(--a2);text-align:center}
+  .map-gap h3,.map-sol h3{font-size:12px;font-weight:600;margin-bottom:2px}
+  .map-gap p,.map-sol p{font-size:11px;color:var(--muted)}
+
+  /* S6 */
+  #s6 .plat-grid{display:grid;grid-template-columns:1fr 1fr;gap:14px;max-width:900px;width:100%;margin-top:16px}
+  .plat-card{background:var(--card);border:1px solid var(--border);border-radius:15px;padding:18px}
+  .plat-card .pi{font-size:26px;margin-bottom:8px}
+  .plat-card h3{font-size:13px;margin-bottom:6px}
+  .plat-card ul{list-style:none;display:flex;flex-direction:column;gap:4px}
+  .plat-card li{font-size:11px;color:var(--muted);display:flex;gap:5px;align-items:flex-start}
+  .plat-card li::before{content:'&#8594;';color:var(--a2);font-weight:700;flex-shrink:0}
+  .solved{display:inline-block;margin-top:8px;font-size:9px;font-weight:700;padding:2px 8px;background:rgba(108,99,255,.15);color:var(--a1);border-radius:6px}
+  #s6 .note{margin-top:16px;font-size:12px;color:var(--muted);text-align:center;max-width:760px}
+  #s6 .note strong{color:var(--a2)}
+
+  /* S7 */
+  #s7 .stats{display:grid;grid-template-columns:repeat(4,1fr);gap:14px;max-width:860px;width:100%;margin-top:20px}
+  .stat-card{background:var(--card);border:1px solid var(--border);border-radius:15px;padding:22px 12px;text-align:center}
+  .stat-n{font-family:'Poppins',sans-serif;font-size:40px;font-weight:800;background:linear-gradient(135deg,var(--a1),var(--a2));-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;line-height:1}
+  .stat-l{font-size:11px;color:var(--muted);margin-top:7px;line-height:1.4}
+  #s7 .etapas{display:flex;gap:9px;max-width:860px;width:100%;margin-top:14px}
+  .etapa-pill{flex:1;background:var(--card);border:1px solid var(--border);border-radius:11px;padding:10px 11px;display:flex;align-items:center;gap:7px}
+  .ep-badge{font-size:9px;font-weight:700;padding:2px 7px;border-radius:7px;white-space:nowrap;background:rgba(0,212,170,.15);color:var(--a2)}
+  .etapa-pill p{font-size:10px;color:var(--muted);line-height:1.3}
+
+  /* S8 */
+  #s8{background:radial-gradient(ellipse 70% 50% at 50% 110%,rgba(0,212,170,.12) 0%,transparent 60%),var(--bg)}
+  #s8 h1{font-size:clamp(28px,4vw,52px);text-align:center;max-width:760px}
+  #s8 .impact-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:13px;max-width:820px;width:100%;margin-top:28px}
+  .impact-card{background:var(--card);border:1px solid var(--border);border-radius:15px;padding:16px;text-align:center}
+  .impact-card .ii{font-size:28px;margin-bottom:7px}
+  .impact-card h3{font-size:13px;margin-bottom:4px}
+  .impact-card p{font-size:11px;color:var(--muted);line-height:1.5}
+</style>
+</head>
+<body>
+<div class="orb orb1"></div>
+<div class="orb orb2"></div>
+<div class="prog" id="prog"></div>
+<div class="kbd-hint"><kbd>&#8592;</kbd><kbd>&#8594;</kbd> navegar &nbsp;|&nbsp; <kbd>F</kbd> fullscreen</div>
+<div class="deck" id="deck">
+
+<!-- SLIDE 1: CAPA -->
+<div class="slide" id="s1">
+  <div class="logo">&#128200;</div>
+  <div class="tag purple">&#10022; FIAP Tech Challenge &middot; Fase 5 &middot; Datathon</div>
+  <h1 style="font-size:clamp(28px,4.5vw,58px);text-align:center"><span class="grad">Plataforma MLOps</span></h1>
+  <h1 style="font-size:clamp(16px,2.4vw,30px);font-weight:300;color:var(--muted);margin-top:6px;text-align:center">Production-Grade para o Mercado Financeiro</h1>
+  <p class="sub">Construímos uma plataforma MLOps completa para resolver os <strong style="color:var(--text)">9 gaps críticos</strong> identificados em uma grande instituição financeira brasileira. Demonstrada de ponta a ponta com um modelo de previsão de ativos (LSTM + agente LLM).</p>
+  <div class="badges">
+    <div class="badge">&#127891; <span>FIAP</span> &middot; Pós-Tech Machine Learning Engineer</div>
+    <div class="badge">&#9889; <span>MLOps Nível 2+</span> em todas as dimensões</div>
+    <div class="badge">&#127970; <span>Mercado Financeiro</span> &middot; B3 &middot; Open-Source</div>
+  </div>
+</div>
+
+<!-- SLIDE 2: DIAGNÓSTICO -->
+<div class="slide" id="s2">
+  <div class="tag red">&#9888;&#65039; O Diagnóstico</div>
+  <h2 style="font-size:clamp(20px,3vw,36px);text-align:center">Assessment de maturidade MLOps em uma grande<br/>instituição financeira revelou padrões críticos</h2>
+  <div class="ctx-grid">
+    <div class="ctx-card">
+      <div class="ci">&#128200;</div>
+      <h3>Modelos esquecidos em produção</h3>
+      <p>Após o deploy, nenhum sistema verifica se o modelo ainda performa. A degradação silenciosa gera decisões erradas durante semanas sem qualquer alerta.</p>
+      <div class="ctx-q">"Ninguém sabe qual versão está em produção. Nem com quais dados foi treinada."</div>
+    </div>
+    <div class="ctx-card">
+      <div class="ci">&#128163;</div>
+      <h3>Notebooks como ponto único de falha</h3>
+      <p>Um único notebook controlava múltiplos modelos em produção. Uma edição derrubava tudo. Em um caso real, 30+ alertas explodiram em um fim de semana.</p>
+      <div class="ctx-q">"O MLE editou o notebook. O modelo dele rodou. Os outros pararam."</div>
+    </div>
+    <div class="ctx-card">
+      <div class="ci">&#128465;&#65039;</div>
+      <h3>Feature store com flush destrutivo</h3>
+      <p>Cache deletado e recarregado a cada 10-55 minutos. Na janela vazia, transações eram processadas sem features — decisões incorretas garantidas.</p>
+      <div class="ctx-q">"Sistema de detecção de fraude com janela periódica de store vazio."</div>
+    </div>
+    <div class="ctx-card">
+      <div class="ci">&#129514;</div>
+      <h3>Cobertura de testes próxima de zero</h3>
+      <p>Quality gate configurado em 1% de cobertura. Equipes burlavam o SonarQube excluindo pastas. Código ia para produção sem validação alguma.</p>
+      <div class="ctx-q">"Eles nem sabem o que é pytest." &mdash; assessment real.</div>
+    </div>
+  </div>
+</div>
+
+<!-- SLIDE 3: 9 GAPS -->
+<div class="slide" id="s3">
+  <div class="tag red">&#128269; Gaps Identificados</div>
+  <h2 style="font-size:clamp(18px,2.8vw,32px);text-align:center">9 gaps críticos em plataformas ML de instituições financeiras</h2>
+  <div class="gaps-grid">
+    <div class="gap-item">
+      <div class="gn">GAP 01</div><h3>Sem Monitoramento</h3>
+      <p>Modelo deployado e esquecido. Nenhuma métrica operacional ou de qualidade em produção.</p>
+      <span class="sev sev-c">Crítico</span>
+    </div>
+    <div class="gap-item">
+      <div class="gn">GAP 02</div><h3>Notebook como SPOF</h3>
+      <p>Um ponto único de falha controla múltiplos pipelines de produção.</p>
+      <span class="sev sev-c">Crítico</span>
+    </div>
+    <div class="gap-item">
+      <div class="gn">GAP 03</div><h3>Feature Store Destrutiva</h3>
+      <p>Full-flush periódico cria janelas sem dados &mdash; decisões erradas garantidas.</p>
+      <span class="sev sev-c">Crítico</span>
+    </div>
+    <div class="gap-item">
+      <div class="gn">GAP 04</div><h3>Cobertura de Testes &#8776; 0</h3>
+      <p>Quality gates burlados. Código vai direto para produção sem validação.</p>
+      <span class="sev sev-c">Crítico</span>
+    </div>
+    <div class="gap-item">
+      <div class="gn">GAP 05</div><h3>Sem Governança de Modelos</h3>
+      <p>Sem lineage, sem tags padronizadas, sem aprovação formal. Impossível auditar.</p>
+      <span class="sev sev-h">Alto</span>
+    </div>
+    <div class="gap-item">
+      <div class="gn">GAP 06</div><h3>Sem Detecção de Drift</h3>
+      <p>Data drift e concept drift passam despercebidos. Degradação silenciosa.</p>
+      <span class="sev sev-c">Crítico</span>
+    </div>
+    <div class="gap-item">
+      <div class="gn">GAP 07</div><h3>Retreinamento Manual</h3>
+      <p>Sem gatilho automatizado. Em alguns casos, o modelo retreinava a cada predição.</p>
+      <span class="sev sev-h">Alto</span>
+    </div>
+    <div class="gap-item">
+      <div class="gn">GAP 08</div><h3>Dev sem Dados Reais</h3>
+      <p>Ambiente de desenvolvimento sem dados. Todo teste acontecia em produção.</p>
+      <span class="sev sev-h">Alto</span>
+    </div>
+    <div class="gap-item">
+      <div class="gn">GAP 09</div><h3>Skills Gap de Engenharia</h3>
+      <p>Sem type hints, sem logging, sem DVC. Zero controle de qualidade de código.</p>
+      <span class="sev sev-h">Alto</span>
+    </div>
+  </div>
+</div>
+
+<!-- SLIDE 4: MATURIDADE -->
+<div class="slide" id="s4">
+  <div class="tag gold">&#128202; Microsoft MLOps Maturity Model</div>
+  <h2 style="font-size:clamp(18px,2.8vw,32px);text-align:center">De Nível 0 (inaceitável) para <span class="grad">Nível 2 (entregue pela plataforma)</span></h2>
+  <div class="mt">
+    <div class="mr hdr">
+      <div class="mc">Dimensão</div>
+      <div class="mc">Nível 0 &middot; Inaceitável</div>
+      <div class="mc">Nível 1 &middot; Mínimo</div>
+      <div class="mc" style="color:var(--a2)">&#9989; Nível 2 &middot; Plataforma</div>
+    </div>
+    <div class="mr hlr">
+      <div class="mc md">Experiment Mgmt</div>
+      <div class="mc l0">Sem tracking</div>
+      <div class="mc l1">MLflow manual, inconsistente</div>
+      <div class="mc l2">MLflow padronizado: params + métricas + artefatos</div>
+    </div>
+    <div class="mr hlr">
+      <div class="mc md">Model Management</div>
+      <div class="mc l0">Sem registro</div>
+      <div class="mc l1">Registro manual sem lineage</div>
+      <div class="mc l2">Registry com estágios Staging &#8594; Production + rollback</div>
+    </div>
+    <div class="mr hlr">
+      <div class="mc md">Monitoring</div>
+      <div class="mc l0">Sem observabilidade</div>
+      <div class="mc l1">Logs básicos esparsos</div>
+      <div class="mc l2">Prometheus + Grafana + Evidently + alertas PSI</div>
+    </div>
+    <div class="mr hlr">
+      <div class="mc md">Data Management</div>
+      <div class="mc l0">Dados soltos</div>
+      <div class="mc l1">Copiados manualmente</div>
+      <div class="mc l2">DVC + MinIO + Pandera schema contracts</div>
+    </div>
+    <div class="mr hlr">
+      <div class="mc md">Feature Management</div>
+      <div class="mc l0">Sem feature store</div>
+      <div class="mc l1">Single-model, sem compartilhamento</div>
+      <div class="mc l2">Feast compartilhado + materialização incremental</div>
+    </div>
+  </div>
+</div>
+
+<!-- SLIDE 5: GAP → SOLUÇÃO -->
+<div class="slide" id="s5">
+  <div class="tag teal">&#128161; Da Dor ao Remédio</div>
+  <h2 style="font-size:clamp(18px,2.8vw,32px);text-align:center">Cada gap tem uma solução concreta implementada na plataforma</h2>
+  <div class="map-list">
+    <div class="map-row">
+      <div class="map-gap"><h3>GAP 01 &mdash; Sem monitoramento</h3><p>Modelos esquecidos. Degradação invisível em produção.</p></div>
+      <div class="map-arrow">&#8594;</div>
+      <div class="map-sol"><h3>Evidently + Prometheus + Grafana</h3><p>Drift detection, métricas operacionais e dashboards em tempo real.</p></div>
+    </div>
+    <div class="map-row">
+      <div class="map-gap"><h3>GAP 02 &mdash; Notebook como SPOF</h3><p>Pipeline frágil com ponto único de falha crítico.</p></div>
+      <div class="map-arrow">&#8594;</div>
+      <div class="map-sol"><h3>DVC pipeline + Docker por etapa</h3><p>Jobs isolados, reproduzíveis e versionados. Zero SPOF.</p></div>
+    </div>
+    <div class="map-row">
+      <div class="map-gap"><h3>GAP 03 &mdash; Feature store com full-flush</h3><p>Janelas sem dados geram decisões erradas.</p></div>
+      <div class="map-arrow">&#8594;</div>
+      <div class="map-sol"><h3>Feast com upsert incremental</h3><p>Materialização delta — sem janelas de store vazio.</p></div>
+    </div>
+    <div class="map-row">
+      <div class="map-gap"><h3>GAP 04 &mdash; Cobertura &#8776; 0%</h3><p>Sem testes, sem validação, risco total em produção.</p></div>
+      <div class="map-arrow">&#8594;</div>
+      <div class="map-sol"><h3>pytest + Pandera + TestClient</h3><p>5 suítes de testes, cobertura mínima de 80%.</p></div>
+    </div>
+    <div class="map-row">
+      <div class="map-gap"><h3>GAPs 05-07 &mdash; Governança e drift</h3><p>Sem lineage, sem drift, retreinamento ad-hoc.</p></div>
+      <div class="map-arrow">&#8594;</div>
+      <div class="map-sol"><h3>MLflow Registry + Evidently PSI + YAML</h3><p>Versionamento completo, drift com alerta, configuração externalizada.</p></div>
+    </div>
+  </div>
+</div>
+
+<!-- SLIDE 6: A PLATAFORMA EM AÇÃO -->
+<div class="slide" id="s6">
+  <div class="tag purple">&#127959;&#65039; A Plataforma em Ação</div>
+  <h2 style="font-size:clamp(18px,2.8vw,32px);text-align:center">Demonstrada end-to-end com um modelo de previsão de ativos</h2>
+  <div class="plat-grid">
+    <div class="plat-card" style="border-color:rgba(108,99,255,.35)">
+      <div class="pi">&#129521;</div><h3>Pipeline de Dados &amp; Treinamento</h3>
+      <ul>
+        <li>Ingestão yfinance &#8594; MinIO (DVC versionado)</li>
+        <li>Feature engineering: RSI, MACD, Bollinger, ATR</li>
+        <li>Feast com materialização incremental (resolve GAP 03)</li>
+        <li>Modelo LSTM treinado como referência da plataforma</li>
+        <li>Pandera para contratos de esquema validados</li>
+      </ul>
+      <span class="solved">Resolve GAPs 02, 03, 08, 09</span>
+    </div>
+    <div class="plat-card" style="border-color:rgba(0,212,170,.25)">
+      <div class="pi">&#128202;</div><h3>Governança &amp; MLflow Registry</h3>
+      <ul>
+        <li>MLflow: params, métricas e artefatos por run</li>
+        <li>Registry com estágios Staging &#8594; Production</li>
+        <li>Rollback automático para versão estável anterior</li>
+        <li>Lineage completo: dados, código, modelo e métricas</li>
+        <li>Metadata obrigatória: owner, risk_level, git_sha</li>
+      </ul>
+      <span class="solved">Resolve GAP 05</span>
+    </div>
+    <div class="plat-card" style="border-color:rgba(247,201,72,.25)">
+      <div class="pi">&#128301;</div><h3>Observabilidade &amp; Drift Detection</h3>
+      <ul>
+        <li>Evidently PSI por feature com thresholds em YAML</li>
+        <li>Prometheus: métricas operacionais em tempo real</li>
+        <li>Grafana: dashboards de latência, erros e drift</li>
+        <li>Alertas automáticos configuráveis</li>
+        <li>Endpoint /drift para inspeção sob demanda</li>
+      </ul>
+      <span class="solved">Resolve GAPs 01, 06, 07</span>
+    </div>
+    <div class="plat-card" style="border-color:rgba(255,107,107,.25)">
+      <div class="pi">&#128272;</div><h3>Segurança, Testes &amp; Conformidade</h3>
+      <ul>
+        <li>Agente LLM (ReAct + RAG) como interface de consulta</li>
+        <li>OWASP Top 10 mapeado com mitigações implementadas</li>
+        <li>PII detection + anonimização automática (LGPD)</li>
+        <li>5 suítes pytest, cobertura mínima de 80%</li>
+        <li>Red Team: 5 cenários adversariais documentados</li>
+      </ul>
+      <span class="solved">Resolve GAPs 04, 09</span>
+    </div>
+  </div>
+  <p class="note">O modelo LSTM é o <strong>veículo de demonstração</strong>. A plataforma MLOps &mdash; pipelines, governança, observabilidade e segurança &mdash; é o <strong>produto entregue</strong>.</p>
+</div>
+
+<!-- SLIDE 7: RESULTADOS -->
+<div class="slide" id="s7">
+  <div class="tag teal">&#128200; Resultados Alcançados</div>
+  <h2 style="font-size:clamp(18px,2.8vw,32px);text-align:center;margin-bottom:4px">Todas as etapas do Datathon entregues</h2>
+  <p style="font-size:12px;color:var(--muted);text-align:center">Métricas validadas no ambiente com Docker Compose end-to-end.</p>
+  <div class="stats">
+    <div class="stat-card"><div class="stat-n">9/9</div><div class="stat-l">Gaps identificados<br/>com solução implementada</div></div>
+    <div class="stat-card"><div class="stat-n">~58%</div><div class="stat-l">Acurácia direcional<br/>do modelo de referência</div></div>
+    <div class="stat-card"><div class="stat-n">25</div><div class="stat-l">Entradas no golden set<br/>LLM-as-Judge validado</div></div>
+    <div class="stat-card"><div class="stat-n">80%+</div><div class="stat-l">Cobertura de testes<br/>(vs. 1% no mercado)</div></div>
+  </div>
+  <div class="etapas">
+    <div class="etapa-pill"><span style="font-size:14px">&#9989;</span><span class="ep-badge">Etapa 1</span><p>Dados + Baseline &middot; LSTM &middot; MLflow &middot; DVC &middot; Feast &middot; schema</p></div>
+    <div class="etapa-pill"><span style="font-size:14px">&#9989;</span><span class="ep-badge">Etapa 2</span><p>Agente LLM &middot; RAG &middot; FastAPI &middot; A/B &middot; rate limiting</p></div>
+    <div class="etapa-pill"><span style="font-size:14px">&#9989;</span><span class="ep-badge">Etapa 3</span><p>LLM-Judge &middot; Evidently &middot; Prometheus &middot; Grafana</p></div>
+    <div class="etapa-pill"><span style="font-size:14px">&#9989;</span><span class="ep-badge">Etapa 4</span><p>OWASP &middot; PII &middot; Guardrails &middot; LGPD &middot; Red Team</p></div>
+  </div>
+</div>
+
+<!-- SLIDE 8: IMPACTO -->
+<div class="slide" id="s8">
+  <div class="tag teal">&#128640; Impacto</div>
+  <h1>Da maturidade zero<br/><span class="grad">para produção confiável.</span></h1>
+  <div class="impact-grid">
+    <div class="impact-card"><div class="ii">&#128301;</div><h3>Observabilidade Total</h3><p>De zero monitoramento para métricas, drift, dashboards e alertas automáticos &mdash; GAPs 01, 06, 07 resolvidos.</p></div>
+    <div class="impact-card"><div class="ii">&#127959;&#65039;</div><h3>Arquitetura Resiliente</h3><p>De notebooks SPOF para pipeline declarativo isolado, versionado e reproduzível &mdash; GAPs 02, 08 resolvidos.</p></div>
+    <div class="impact-card"><div class="ii">&#128202;</div><h3>Governança Rastreável</h3><p>Lineage completo, rollback automático, registry com estágios e aprovação &mdash; GAP 05 resolvido.</p></div>
+    <div class="impact-card"><div class="ii">&#128272;</div><h3>Segurança &amp; Conformidade</h3><p>OWASP, LGPD, PII, guardrails e red team &mdash; pronto para instituições reguladas.</p></div>
+    <div class="impact-card"><div class="ii">&#128207;</div><h3>Qualidade Mensurável</h3><p>80%+ cobertura, LLM-as-Judge em 4 critérios, A/B benchmark &mdash; avaliação contínua e reproduzível.</p></div>
+    <div class="impact-card"><div class="ii">&#9729;&#65039;</div><h3>Cloud-Agnostic</h3><p>100% open-source, sem vendor lock-in. Roda em AWS, Azure, GCP ou on-premise com Docker Compose.</p></div>
+  </div>
+  <p style="margin-top:20px;font-size:12px;color:var(--muted)">FIAP Tech Challenge &middot; Fase 5 &middot; Datathon &middot; 2026 &nbsp;&middot;&nbsp; <code style="font-size:11px">docker compose up --build</code></p>
+</div>
+
+</div><!-- /.deck -->
+
+<div class="nav" id="nav">
+  <button id="prev">&#8592;</button>
+  <div class="dots" id="dots"></div>
+  <div class="cnt" id="cnt"></div>
+  <button id="next">&#8594;</button>
+</div>
+
+<script>
+(function(){
+  const slides=Array.from(document.querySelectorAll('.slide'));
+  const dotsEl=document.getElementById('dots');
+  const cntEl=document.getElementById('cnt');
+  const progEl=document.getElementById('prog');
+  let cur=0,anim=false;
+  slides.forEach((_,i)=>{
+    const d=document.createElement('span');
+    d.className='dot'+(i===0?' active':'');
+    d.addEventListener('click',()=>goTo(i));
+    dotsEl.appendChild(d);
+  });
+  function sync(){
+    document.querySelectorAll('.dot').forEach((d,i)=>d.classList.toggle('active',i===cur));
+    cntEl.textContent=(cur+1)+' / '+slides.length;
+    progEl.style.width=((cur+1)/slides.length*100)+'%';
+  }
+  function goTo(idx){
+    if(anim||idx===cur||idx<0||idx>=slides.length)return;
+    anim=true;
+    const prev=cur;cur=idx;
+    slides[prev].classList.add('exit');
+    slides[cur].classList.add('active');
+    sync();
+    setTimeout(()=>{slides[prev].classList.remove('exit','active');anim=false;},520);
+  }
+  slides[0].classList.add('active');sync();
+  document.getElementById('prev').addEventListener('click',()=>goTo(cur-1));
+  document.getElementById('next').addEventListener('click',()=>goTo(cur+1));
+  document.addEventListener('keydown',e=>{
+    if(e.key==='ArrowRight'||e.key===' ')goTo(cur+1);
+    if(e.key==='ArrowLeft')goTo(cur-1);
+    if(e.key.toLowerCase()==='f')document.fullscreenElement?document.exitFullscreen():document.documentElement.requestFullscreen();
+  });
+  let tx=0;
+  document.addEventListener('touchstart',e=>{tx=e.touches[0].clientX;});
+  document.addEventListener('touchend',e=>{const dx=e.changedTouches[0].clientX-tx;if(Math.abs(dx)>50)dx<0?goTo(cur+1):goTo(cur-1);});
+})();
+</script>
+</body>
+</html>

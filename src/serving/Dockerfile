@@ -23,8 +23,9 @@ RUN pip install --no-cache-dir \
     pandas numpy pyarrow yfinance ta \
     fsspec s3fs \
     scikit-learn tensorflow mlflow \
-    fastapi uvicorn pydantic pydantic-settings \
-    prometheus-client structlog tenacity rich joblib boto3 python-dotenv
+    fastapi uvicorn pydantic pydantic-settings slowapi \
+    prometheus-client structlog tenacity rich joblib boto3 python-dotenv \
+    pandera pyyaml
 
 # Step 3: monitoring (Evidently) — separate step to catch failures explicitly
 RUN pip install --no-cache-dir "evidently>=0.4.30,<0.5.0"
