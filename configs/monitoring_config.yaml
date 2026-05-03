@@ -1,0 +1,53 @@
+# ============================================================
+# Monitoring Configuration
+# configs/monitoring_config.yaml
+#
+# Thresholds and settings for observability, drift detection,
+# rate limiting and guardrails.  All values here override the
+# hard-coded defaults in src/monitoring/drift.py and
+# src/serving/app.py.
+# ============================================================
+
+# ── Data Drift (Evidently) ────────────────────────────────────────────────────
+drift:
+  # Share-of-drifted-columns thresholds (0.0 – 1.0)
+  green_threshold:  0.20   # below this  → alert_level = "green"
+  yellow_threshold: 0.50   # above this  → alert_level = "red"  (between → "yellow")
+
+  # Kolmogorov-Smirnov / chi-square p-value threshold used by Evidently
+  stattest_threshold: 0.05
+
+  # Default output path for the HTML drift report
+  report_output_path: "reports/drift_report.html"
+
+# ── Rate Limiting (slowapi) ───────────────────────────────────────────────────
+rate_limiting:
+  enabled: true
+
+  # Requests-per-minute per remote IP for each endpoint
+  predict_per_minute:  30   # POST /predict  (LSTM inference)
+  agent_per_minute:    10   # POST /agent    (LLM call – expensive)
+  default_per_minute:  60   # all other endpoints
+
+# ── Guardrails ────────────────────────────────────────────────────────────────
+guardrails:
+  enabled: true
+  max_query_length:    500   # characters — longer queries are rejected
+  max_response_length: 2000  # characters — truncate if agent response exceeds this
+
+# ── Alert Thresholds ─────────────────────────────────────────────────────────
+alerts:
+  # Drift
+  drift_psi_warn:     0.20   # send WARNING log / metric when drift exceeds this
+  drift_psi_critical: 0.50   # send CRITICAL log / metric when drift exceeds this
+
+  # Model performance (compared against baseline metrics in MLflow)
+  model_accuracy_min:  0.50  # minimum acceptable test accuracy
+
+  # API latency
+  latency_p95_ms: 2000       # Prometheus alert fires when p95 latency > this
+
+# ── LLM Judge (A/B benchmark) ────────────────────────────────────────────────
+llm_judge:
+  pass_threshold: 3.0        # minimum average score (1–5) to receive PASS verdict
+  default_n_benchmark_entries: 5  # default sample size for ab_test_prompts.py

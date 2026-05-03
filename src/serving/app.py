@@ -24,6 +24,9 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import PlainTextResponse, Response
 from prometheus_client import Counter, Gauge, Histogram, generate_latest
 from pydantic import BaseModel, Field
+from slowapi import Limiter, _rate_limit_exceeded_handler
+from slowapi.errors import RateLimitExceeded
+from slowapi.util import get_remote_address
 
 from src.config.settings import get_settings
 from src.config.storage import get_storage
@@ -55,6 +58,11 @@ DRIFT_SCORE = Gauge(
     "feature_drift_score",
     "Feature drift score",
 )
+
+# ============================================================
+# Rate Limiter (slowapi)
+# ============================================================
+limiter = Limiter(key_func=get_remote_address, default_limits=["60/minute"])
 
 # ============================================================
 # Global state
@@ -331,6 +339,10 @@ app = FastAPI(
     license_info={"name": "MIT", "identifier": "MIT"},
     lifespan=lifespan,
 )
+
+# Rate-limiter wiring
+app.state.limiter = limiter
+app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
 
 # CORS middleware
 app.add_middleware(
@@ -690,7 +702,8 @@ async def get_features() -> FeaturesResponse:
         500: {"description": "Erro interno durante a predição."},
     },
 )
-async def predict(request: PredictionRequest) -> PredictionResponse:
+@limiter.limit("30/minute")
+async def predict(http_request: Request, request: PredictionRequest) -> PredictionResponse:
     """
     Realiza predição de direção de preço para os próximos 5 dias úteis usando o modelo LSTM.
 
@@ -854,7 +867,8 @@ async def predict(request: PredictionRequest) -> PredictionResponse:
         500: {"description": "Erro interno no agente."},
     },
 )
-async def agent_query(request: AgentRequest) -> AgentResponse:
+@limiter.limit("10/minute")
+async def agent_query(http_request: Request, request: AgentRequest) -> AgentResponse:
     """
     Consulta o agente LLM com ferramentas de análise financeira e RAG (ChromaDB).
 
