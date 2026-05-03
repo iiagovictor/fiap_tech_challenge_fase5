@@ -22,7 +22,7 @@ RUN pip install --no-cache-dir --upgrade pip && \
     fsspec s3fs \
     scikit-learn tensorflow mlflow \
     fastapi uvicorn pydantic pydantic-settings \
-    prometheus-client 'evidently>=0.4.30,<0.5.0' structlog tenacity rich joblib boto3 python-dotenv
+    prometheus-client evidently>=0.4.30,<0.5.0 structlog tenacity rich joblib boto3 python-dotenv ragas datasets
 
 # ============================================================
 # Final stage
