@@ -24,6 +24,7 @@
 - [Monitoramento](#monitoramento)
 - [Testes](#testes)
 - [Avaliação de Qualidade RAG (RAGAS)](#avaliação-de-qualidade-rag-ragas)
+- [LLM-as-Judge (Avaliação de Qualidade do Agente)](#llm-as-judge-avaliação-de-qualidade-do-agente)
 - [Pipeline DVC (Versionamento de Dados)](#pipeline-dvc-versionamento-de-dados)
 - [Referência da API](#referência-da-api)
 - [Estrutura do Projeto](#estrutura-do-projeto)
@@ -50,6 +51,7 @@ Esta plataforma é uma solução **MLOps/LLMOps cloud-agnostic** desenvolvida co
 | **API REST** | FastAPI com endpoints de predição, saúde, métricas e drift |
 | **Agente LLM** | Agente ReAct com RAG que responde perguntas sobre ações em linguagem natural |
 | **Avaliação RAG** | RAGAS (Faithfulness, Answer Relevancy, Context Precision/Recall) + Golden Set com métricas de similaridade |
+| **LLM-as-Judge** | Avalia respostas do agente em 4 critérios via LLM: Relevância, Fidelidade Técnica, Adequação para Decisão de Investimento (critério de negócio) e Clareza — veredicto `PASS` / `FAIL` |
 | **Monitoramento** | Prometheus + Grafana + Evidently para observabilidade completa |
 | **Segurança** | Guardrails contra prompt injection + detecção de PII com Presidio |
 
@@ -810,6 +812,89 @@ Results saved to: reports/ragas_results.csv
 ```
 
 > **Nota:** Para usar OpenAI ou Gemini como LLM juiz, passe `--model openai/gpt-4o-mini` e configure a chave em `.env`.
+
+---
+
+## LLM-as-Judge (Avaliação de Qualidade do Agente)
+
+O **LLM-as-Judge** avalia automaticamente a qualidade das respostas do agente usando outro LLM como juiz imparcial. Cada resposta é pontuada em **4 critérios** em uma escala de 1 a 5, gerando um veredicto `PASS` / `FAIL`.
+
+### Critérios de Avaliação
+
+| # | Critério | O que avalia |
+|---|---|---|
+| 1 | **Relevância** | A resposta é diretamente responsiva à pergunta feita? |
+| 2 | **Fidelidade Técnica** | As afirmações sobre RSI, MACD, médias móveis etc. são consistentes com os contextos recuperados? |
+| 3 | **Adequação para Decisão de Investimento** *(critério de negócio)* | A resposta é útil, cautelosa e inclui os devidos disclaimers de risco? |
+| 4 | **Clareza e Fundamentação** | A resposta é clara, bem estruturada e fundamentada nos dados? |
+
+### Veredicto
+
+| Score médio | Veredicto |
+|---|---|
+| ≥ 3.0 | ✅ `PASS` |
+| < 3.0 | ❌ `FAIL` |
+
+### Uso programático
+
+```python
+from src.evaluation.llm_judge import LLMJudge
+
+judge = LLMJudge()
+
+# Avaliar uma resposta individual
+result = judge.evaluate(
+    query="A VALE3.SA está em sobrecompra?",
+    answer="VALE3.SA está próxima da sobrecompra com RSI ~68, mas ainda abaixo de 70.",
+    contexts=["RSI próximo a 68", "MACD ainda positivo"],
+    expected_answer="VALE3.SA está perto da zona de sobrecompra...",  # opcional
+)
+print(result.overall_score)  # ex: 4.25
+print(result.verdict)        # "PASS"
+
+for crit in result.criteria:
+    print(f"[{crit.score:.1f}] {crit.label}: {crit.justification}")
+```
+
+### Avaliação em lote (golden set)
+
+```python
+from src.evaluation.llm_judge import LLMJudge
+from src.evaluation.golden_set import load_golden_set
+
+judge = LLMJudge()
+entries = load_golden_set()
+
+batch = [
+    {"query": e.query, "answer": e.expected_answer, "contexts": e.contexts}
+    for e in entries
+]
+results = judge.evaluate_batch(batch)
+
+summary = judge.summarize(results)
+print(f"Score médio: {summary['overall_average_score']:.2f}")
+print(f"Pass rate:   {summary['pass_rate']:.1%}")
+```
+
+### CLI — smoke test
+
+```bash
+python -m src.evaluation.llm_judge
+```
+
+Avalia a primeira entrada do golden set e imprime os scores por critério.
+
+### Modelo e fallback
+
+O judge usa o modelo configurado em `LLM_MODEL` (`.env`). Em caso de indisponibilidade (HTTP 503), faz fallback automático para `gemini/gemini-1.5-flash`.
+
+### Testes
+
+```bash
+python -m pytest tests/test_llm_judge.py -v
+```
+
+28 testes unitários, todos com LLM mockado — nenhuma chamada de API real é feita.
 
 ---
 

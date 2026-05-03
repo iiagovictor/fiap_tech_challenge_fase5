@@ -1,5 +1,17 @@
-"""Evaluation helpers for agent golden set and RAG assessment."""
+"""Evaluation helpers for agent golden set, RAG assessment, and LLM-as-judge."""
 
 from .golden_set import GoldenSetEntry, evaluate_golden_set, load_golden_set
+from .llm_judge import CRITERIA_LABELS, PASS_THRESHOLD, CriterionResult, JudgeResult, LLMJudge
 
-__all__ = ["GoldenSetEntry", "evaluate_golden_set", "load_golden_set"]
+__all__ = [
+    # Golden set
+    "GoldenSetEntry",
+    "evaluate_golden_set",
+    "load_golden_set",
+    # LLM-as-judge
+    "LLMJudge",
+    "JudgeResult",
+    "CriterionResult",
+    "CRITERIA_LABELS",
+    "PASS_THRESHOLD",
+]
