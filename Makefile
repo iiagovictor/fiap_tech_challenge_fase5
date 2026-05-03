@@ -9,6 +9,7 @@
 ifeq ($(OS),Windows_NT)
     PYTHON := $(CURDIR)\.venv\Scripts\python.exe
     PYTHON_ALT := $(CURDIR)\.venv\Scripts\python
+    FEAST := $(CURDIR)\.venv\Scripts\feast.exe
     LOAD_ENV :=
     GET_DATE := powershell -Command "Get-Date -AsUTC -Format 'o'"
     KILL_PORT := taskkill /F /IM uvicorn.exe 2>nul || echo "✅ Nenhum processo na porta 8000"
@@ -17,6 +18,7 @@ ifeq ($(OS),Windows_NT)
 else
     PYTHON := $(CURDIR)/.venv/bin/python
     PYTHON_ALT := $(PYTHON)
+    FEAST := $(CURDIR)/.venv/bin/feast
     LOAD_ENV := set -a && source .env && set +a &&
     GET_DATE := date -u +%Y-%m-%dT%H:%M:%S
     KILL_PORT := lsof -ti:8000 | xargs kill -9 2>/dev/null || echo "✅ Nenhum processo na porta 8000"
@@ -84,15 +86,15 @@ data-features:  ## Gera features técnicas (RSI, MACD, EMAs, Bollinger)
 # ─── Feature Store (Feast) ────────────────────────────────────────────────────
 feast-apply:  ## Aplica definições do Feature Store
 	@$(MKDIR_CMD) feast/data/feast
-	cd feast && $(PYTHON_ALT) -m feast apply
+	cd feast && $(FEAST) apply
 
 feast-materialize:  ## Materializa features no Redis (online store)
 	@echo "⚠️  Certifique-se que o Redis está rodando (make setup-infra)"
 	@$(MKDIR_CMD) feast/data/feast
-	cd feast && $(PYTHON_ALT) -m feast materialize-incremental $$($(GET_DATE))
+	cd feast && $(FEAST) materialize-incremental $$($(GET_DATE))
 
 feast-ui:  ## Abre Feast Web UI (porta 8888)
-	cd feast && $(PYTHON_ALT) -m feast ui
+	cd feast && $(FEAST) ui
 
 # ─── RAG Knowledge Base ───────────────────────────────────────────────────────
 seed-rag:  ## Popula ChromaDB com conhecimento inicial (análise técnica)
