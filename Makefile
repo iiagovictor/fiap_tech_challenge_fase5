@@ -15,6 +15,17 @@ ifeq ($(OS),Windows_NT)
     KILL_PORT := taskkill /F /IM uvicorn.exe 2>nul || echo "✅ Nenhum processo na porta 8000"
     SLEEP_CMD := timeout /t 15 /nobreak
     MKDIR_CMD := mkdir
+    OPEN_CMD := start
+else ifeq ($(shell uname),Darwin)
+    PYTHON := $(CURDIR)/.venv/bin/python
+    PYTHON_ALT := $(PYTHON)
+    FEAST := $(CURDIR)/.venv/bin/feast
+    LOAD_ENV := set -a && source .env && set +a &&
+    GET_DATE := date -u +%Y-%m-%dT%H:%M:%S
+    KILL_PORT := lsof -ti:8000 | xargs kill -9 2>/dev/null || echo "✅ Nenhum processo na porta 8000"
+    SLEEP_CMD := sleep 15
+    OPEN_CMD := open
+    MKDIR_CMD := mkdir -p
 else
     PYTHON := $(CURDIR)/.venv/bin/python
     PYTHON_ALT := $(PYTHON)
@@ -23,6 +34,7 @@ else
     GET_DATE := date -u +%Y-%m-%dT%H:%M:%S
     KILL_PORT := lsof -ti:8000 | xargs kill -9 2>/dev/null || echo "✅ Nenhum processo na porta 8000"
     SLEEP_CMD := sleep 15
+    OPEN_CMD := xdg-open
     MKDIR_CMD := mkdir -p
 endif
 COMPOSE := docker compose
@@ -174,6 +186,16 @@ docker-build-push:  ## Build e push da imagem Docker para ECR
 	docker tag $(ECR_REPO):latest $$(aws sts get-caller-identity --query Account --output text).dkr.ecr.$(AWS_REGION).amazonaws.com/$(ECR_REPO):latest
 	docker push $$(aws sts get-caller-identity --query Account --output text).dkr.ecr.$(AWS_REGION).amazonaws.com/$(ECR_REPO):latest
 	@echo "✅ Imagem disponível no ECR!"
+
+# ─── Monitoring Reports ───────────────────────────────────────────────────────
+drift-report:  ## Gera e abre o relatório de drift (Evidently HTML)
+	@echo "📊 Gerando relatório de drift..."
+	$(PYTHON) -m src.monitoring.drift
+	@echo "🌐 Abrindo relatório..."
+	$(OPEN_CMD) reports/drift_report.html
+
+coverage-report:  ## Abre relatório de cobertura de testes HTML
+	$(OPEN_CMD) htmlcov/index.html
 
 # ─── Cleanup ──────────────────────────────────────────────────────────────────
 clean:  ## Remove arquivos temporários e caches
