@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 import json
-from collections.abc import Iterable
 from dataclasses import dataclass
 from difflib import SequenceMatcher
 from pathlib import Path
@@ -108,7 +107,9 @@ def evaluate_golden_set(
             }
         )
 
-    summary["average_score"] = round(total_score / summary["evaluated"], 3) if summary["evaluated"] else 0.0
+    summary["average_score"] = (
+        round(total_score / summary["evaluated"], 3) if summary["evaluated"] else 0.0
+    )
     return summary
 
 
